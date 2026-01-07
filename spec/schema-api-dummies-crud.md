@@ -1055,10 +1055,12 @@ curl -X PATCH http://localhost:5000/v0/dummies/abc-123 \
 curl -X DELETE http://localhost:5000/v0/dummies/abc-123 \
   -b "access_token=<jwt>"
 
-# Response: 200 OK
-{
-  "message": "Dummy deleted successfully"
-}
+# Response: 204 No Content
+# Headers:
+#   X-Correlation-ID: <uuid>
+#   X-RateLimit-Limit: 100
+#   X-RateLimit-Remaining: 99
+#   X-RateLimit-Reset: 1700000000
 
 # 6. Verify deletion (soft delete)
 curl http://localhost:5000/v0/dummies \
