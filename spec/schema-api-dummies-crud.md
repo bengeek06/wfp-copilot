@@ -1202,7 +1202,7 @@ curl http://localhost:5000/v0/dummies/not-a-uuid \
 - **VAL-011**: Rate limiting enforces 100 requests per minute per user
 - **VAL-012**: Correlation ID present in all error responses
 
-## 11. Related Specifications / Further Reading
+## 12. Related Specifications / Further Reading
 
 - spec/schema-api-health-endpoints.md - Health check endpoints
 - spec/schema-api-metrics-endpoint.md - Prometheus metrics endpoint
