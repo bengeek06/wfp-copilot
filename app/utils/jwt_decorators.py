@@ -7,10 +7,10 @@
 # See LICENSE and LICENSE.md files in the root directory for full license text.
 # For commercial licensing inquiries, contact: contact@waterfall-project.pro
 
-"""JWT authentication decorators and utilities.
+"""JWT authentication and RBAC authorization decorators.
 
-This module provides decorators for JWT-based authentication,
-extracting user claims from tokens and placing them in Flask context.
+This module provides decorators for JWT-based authentication and
+Guardian-based authorization, extracting user claims and checking permissions.
 """
 
 from collections.abc import Callable
@@ -20,6 +20,8 @@ from typing import Any
 import jwt
 from flask import current_app, g, jsonify, request
 from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
+
+from app.services.guardian_service import GuardianError, GuardianService, Operation
 
 
 class JWTError(Exception):
@@ -220,3 +222,152 @@ def get_current_user_email() -> str | None:
         ...     return jsonify({"email": email})
     """
     return getattr(g, "email", None)
+
+
+def access_required(
+    operation: Operation, resource_name: str | None = None
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator to require Guardian RBAC authorization.
+
+    Checks if the authenticated user has permission to perform
+    the specified operation on the resource. Must be used after
+    @require_jwt_auth as it depends on user_id and company_id in context.
+
+    Args:
+        operation: RBAC operation (LIST, CREATE, READ, UPDATE, DELETE).
+        resource_name: Name of the resource (default: extracted from route).
+
+    Returns:
+        Decorator function that enforces authorization.
+
+    Raises:
+        GuardianError: If Guardian service is unavailable.
+
+    Examples:
+        >>> @require_jwt_auth
+        ... @access_required(Operation.READ, "projects")
+        ... def get_project(project_id):
+        ...     return jsonify({"id": project_id})
+    """
+
+    def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(f)
+        def decorated_function(*args: Any, **kwargs: Any) -> Any:
+            """Wrapper that checks Guardian permissions before calling original.
+
+            Args:
+                *args: Positional arguments for wrapped function.
+                **kwargs: Keyword arguments for wrapped function.
+
+            Returns:
+                Response from wrapped function or 403 error.
+            """
+            # Extract resource name from route if not provided
+            nonlocal resource_name
+            if not resource_name:
+                # Try to get from endpoint name
+                endpoint = request.endpoint
+                if endpoint:
+                    # Convert 'api.user_resource' -> 'users'
+                    parts = endpoint.split(".")
+                    if len(parts) > 1:
+                        resource_name = parts[-1].replace("_resource", "s")
+
+            if not resource_name:
+                current_app.logger.error(
+                    "Cannot determine resource name for access check",
+                    extra={
+                        "endpoint": request.endpoint,
+                        "correlation_id": getattr(g, "correlation_id", "N/A"),
+                    },
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": "Internal Server Error",
+                            "message": "Cannot determine resource for authorization.",
+                        }
+                    ),
+                    500,
+                )
+
+            # Get user context from JWT (set by @require_jwt_auth)
+            user_id = get_current_user_id()
+            company_id = get_current_company_id()
+
+            if not user_id or not company_id:
+                current_app.logger.error(
+                    "Missing user context for authorization",
+                    extra={
+                        "correlation_id": getattr(g, "correlation_id", "N/A"),
+                    },
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": "Unauthorized",
+                            "message": "User context missing. Use @require_jwt_auth first.",
+                        }
+                    ),
+                    401,
+                )
+
+            # Build context from route parameters
+            context = {key: str(value) for key, value in kwargs.items()}
+
+            try:
+                # Check access with Guardian
+                access_granted, reason = GuardianService.check_access(
+                    user_id=user_id,
+                    company_id=company_id,
+                    resource_name=resource_name,
+                    operation=operation,
+                    context=context if context else None,
+                )
+
+                if not access_granted:
+                    current_app.logger.warning(
+                        "Access denied by Guardian",
+                        extra={
+                            "user_id": user_id,
+                            "company_id": company_id,
+                            "resource_name": resource_name,
+                            "operation": operation.value,
+                            "reason": reason,
+                            "correlation_id": getattr(g, "correlation_id", "N/A"),
+                        },
+                    )
+                    return (
+                        jsonify(
+                            {
+                                "error": "Forbidden",
+                                "message": f"Access denied: {reason}",
+                            }
+                        ),
+                        403,
+                    )
+
+                # Access granted, call original function
+                return f(*args, **kwargs)
+
+            except GuardianError as e:
+                current_app.logger.error(
+                    "Guardian service error",
+                    extra={
+                        "error": str(e),
+                        "correlation_id": getattr(g, "correlation_id", "N/A"),
+                    },
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": "Service Unavailable",
+                            "message": "Authorization service unavailable.",
+                        }
+                    ),
+                    503,
+                )
+
+        return decorated_function
+
+    return decorator
