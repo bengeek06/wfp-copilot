@@ -1,6 +1,6 @@
 ---
 description: "Convert a markdown API specification into a valid OpenAPI 3.x YAML file with complete paths, schemas, and documentation"
-agent: "agent"
+agent: "specification"
 tools: ["edit", "search", "search/codebase", "web/fetch", "execute/getTerminalOutput", "execute/runInTerminal", "read/terminalLastCommand", "read/terminalSelection", "read/problems"]
 ---
 

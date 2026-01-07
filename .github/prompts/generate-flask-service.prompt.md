@@ -1,6 +1,6 @@
 ---
 description: "Generate a service client for external microservices (Guardian, Identity, etc.) with proper error handling, timeouts, and retries"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "read/problems"]
 ---
 

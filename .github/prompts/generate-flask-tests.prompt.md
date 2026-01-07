@@ -1,6 +1,6 @@
 ---
 description: "Generate comprehensive unit and integration tests for Flask resources, models, schemas, and services following wfp-flask-template testing conventions"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "read/problems", "execute/getTerminalOutput","execute/runInTerminal","read/terminalLastCommand","read/terminalSelection"]
 ---
 

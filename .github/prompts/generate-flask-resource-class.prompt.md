@@ -1,6 +1,6 @@
 ---
 description: "Generate Flask-RESTful resource classes (ListResource and Resource) with authentication, authorization, rate limiting, and proper error handling"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "read/problems"]
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: "Generate Marshmallow schemas (Base, Create, Update, Replace) for validation and serialization following wfp-flask-template patterns"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "read/problems"]
 ---
 
