@@ -36,7 +36,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Lint with Redocly CLI
         run: npx --yes @redocly/cli@latest lint --config .redocly.yaml openapi/**/*.yaml
