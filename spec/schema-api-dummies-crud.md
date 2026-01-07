@@ -749,7 +749,7 @@ X-RateLimit-Reset: 1704628800
 - **Given** dummy exists with is_active=true
 - **And** user has DELETE permission
 - **When** DELETE /v0/dummies/{id}
-- **Then** response status is 200
+- **Then** response status is 204
 - **And** dummy.is_active is set to false
 - **And** dummy no longer appears in GET /v0/dummies list
 - **And** dummy can still be retrieved by ID (returns is_active=false)
