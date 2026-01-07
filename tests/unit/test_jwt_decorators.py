@@ -15,14 +15,16 @@ for the @require_jwt_auth decorator.
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
 from flask import Flask, g, jsonify
 
+from app.services.guardian_service import Operation
 from app.utils.jwt_decorators import (
     JWTError,
+    access_required,
     get_current_company_id,
     get_current_user_email,
     get_current_user_id,
@@ -456,3 +458,313 @@ class TestContextHelpers:
         """
         with app.test_request_context():
             assert get_current_user_email() is None
+
+
+class TestAccessRequired:
+    """Tests for @access_required decorator."""
+
+    @pytest.fixture
+    def guardian_app(self) -> Flask:
+        """Fixture providing Flask app with Guardian and JWT config.
+
+        Returns:
+            Configured Flask app instance.
+        """
+        test_app = Flask(__name__)
+        test_app.config.update(
+            {
+                "JWT_SECRET_KEY": "test-secret-key",
+                "JWT_ALGORITHM": "HS256",
+                "JWT_COOKIE_NAME": "access_token",
+                "GUARDIAN_SERVICE_URL": "http://guardian:5001",
+                "GUARDIAN_SERVICE_TIMEOUT": 5,
+                "GUARDIAN_SERVICE_API_KEY": "test-key",
+                "SERVICE_NAME": "test-service",
+                "TESTING": True,
+            }
+        )
+
+        @test_app.route("/projects/<project_id>")
+        @require_jwt_auth
+        @access_required(Operation.READ, "projects")
+        def get_project(project_id: str) -> tuple[dict[str, Any], int]:
+            """Test route with access control."""
+            return jsonify({"id": project_id}), 200
+
+        @test_app.route("/projects", methods=["POST"])
+        @require_jwt_auth
+        @access_required(Operation.CREATE, "projects")
+        def create_project() -> tuple[dict[str, Any], int]:
+            """Test route for creating projects."""
+            return jsonify({"created": True}), 201
+
+        @test_app.route("/users/<user_id>", methods=["DELETE"])
+        @require_jwt_auth
+        @access_required(Operation.DELETE, "users")
+        def delete_user(user_id: str) -> tuple[dict[str, Any], int]:
+            """Test route for deleting users."""
+            return jsonify({"deleted": user_id}), 200
+
+        return test_app
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_grants_access(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required allows access when Guardian grants it.
+
+        Given: Guardian grants access
+        When: Protected route is accessed
+        Then: Status is 200 and function executes
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"access_granted": True, "reason": "granted"}
+        mock_post.return_value = mock_response
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "email": "test@example.com",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            response = client.get("/projects/proj-789")
+
+        assert response.status_code == 200
+        assert response.get_json()["id"] == "proj-789"
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_denies_access(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required denies access when Guardian denies it.
+
+        Given: Guardian denies access
+        When: Protected route is accessed
+        Then: Status is 403
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_granted": False,
+            "reason": "no_permission",
+        }
+        mock_post.return_value = mock_response
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            response = client.get("/projects/proj-789")
+
+        assert response.status_code == 403
+        data = response.get_json()
+        assert data["error"] == "Forbidden"
+        assert "no_permission" in data["message"]
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_passes_context(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required passes route kwargs as context.
+
+        Given: Route with parameters
+        When: Protected route is accessed
+        Then: Parameters are sent as context to Guardian
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"access_granted": True, "reason": "granted"}
+        mock_post.return_value = mock_response
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            client.get("/projects/proj-789")
+
+        call_args = mock_post.call_args
+        assert call_args[1]["json"]["context"] == {"project_id": "proj-789"}
+
+    def test_access_required_without_jwt_auth(self, guardian_app: Flask) -> None:
+        """Test that access_required requires JWT context.
+
+        Given: No JWT authentication (missing user_id/company_id)
+        When: Protected route is accessed
+        Then: Status is 401
+        """
+
+        # Create route without @require_jwt_auth
+        @guardian_app.route("/test-no-jwt")
+        @access_required(Operation.READ, "test")
+        def test_route() -> tuple[dict[str, Any], int]:
+            return jsonify({"test": True}), 200
+
+        with guardian_app.test_client() as client:
+            response = client.get("/test-no-jwt")
+
+        assert response.status_code == 401
+        data = response.get_json()
+        assert "User context missing" in data["message"]
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_handles_guardian_error(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required handles Guardian service errors.
+
+        Given: Guardian service returns error
+        When: Protected route is accessed
+        Then: Status is 503
+        """
+        from requests.exceptions import ConnectionError
+
+        mock_post.side_effect = ConnectionError()
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            response = client.get("/projects/proj-789")
+
+        assert response.status_code == 503
+        data = response.get_json()
+        assert data["error"] == "Service Unavailable"
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_logs_access_denied(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required logs when access is denied.
+
+        Given: Guardian denies access
+        When: Protected route is accessed
+        Then: Warning is logged
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_granted": False,
+            "reason": "no_permission",
+        }
+        mock_post.return_value = mock_response
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            with patch.object(guardian_app.logger, "warning") as mock_log:
+                client.get("/projects/proj-789")
+
+            assert mock_log.called
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_logs_guardian_error(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required logs Guardian errors.
+
+        Given: Guardian service fails
+        When: Protected route is accessed
+        Then: Error is logged
+        """
+        from requests.exceptions import Timeout
+
+        mock_post.side_effect = Timeout()
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            with patch.object(guardian_app.logger, "error") as mock_log:
+                client.get("/projects/proj-789")
+
+            assert mock_log.called
+
+    @patch("app.services.guardian_service.requests.post")
+    def test_access_required_with_different_operations(
+        self, mock_post: Any, guardian_app: Flask
+    ) -> None:
+        """Test that access_required works with different operations.
+
+        Given: Routes with different operations
+        When: Protected routes are accessed
+        Then: Correct operation is sent to Guardian
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"access_granted": True, "reason": "granted"}
+        mock_post.return_value = mock_response
+
+        with guardian_app.test_client() as client:
+            token = jwt.encode(
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456",
+                    "exp": datetime.now(UTC) + timedelta(hours=1),
+                },
+                guardian_app.config["JWT_SECRET_KEY"],
+                algorithm=guardian_app.config["JWT_ALGORITHM"],
+            )
+            client.set_cookie("access_token", token)
+
+            # Test CREATE operation
+            response = client.post("/projects")
+            assert response.status_code == 201
+            # First call should be CREATE
+            first_call = mock_post.call_args_list[0]
+            assert first_call[1]["json"]["operation"] == "CREATE"
+
+            # Test DELETE operation
+            response = client.delete("/users/user-123")
+            assert response.status_code == 200
+            # Second call should be DELETE
+            second_call = mock_post.call_args_list[1]
+            assert second_call[1]["json"]["operation"] == "DELETE"
