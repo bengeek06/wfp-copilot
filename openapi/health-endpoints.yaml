@@ -1,0 +1,420 @@
+openapi: 3.0.3
+info:
+  title: Health, Readiness and Version Endpoints
+  description: |
+    Standardized observability endpoints for Kubernetes health probes, monitoring, 
+    and version tracking. These endpoints are public (no authentication required) and 
+    must be present in all Waterfall microservices.
+  version: 1.0.0
+  contact:
+    name: Backend Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+    
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api-staging.waterfall.com
+    description: Staging server
+  - url: https://api.waterfall.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Service health and readiness checks
+  - name: Version
+    description: Service version information
+
+security: []
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      description: |
+        Checks if the application is alive and functioning. Used by Kubernetes 
+        liveness probes to detect if the container needs restart. Returns 200 OK 
+        even if dependencies are degraded (only fails if app itself is broken).
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is alive (may be degraded)
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Cache-Control:
+              schema:
+                type: string
+                example: no-cache, no-store, must-revalidate
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HealthOk'
+                  - $ref: '#/components/schemas/HealthDegraded'
+              examples:
+                healthy:
+                  summary: All systems operational
+                  value:
+                    status: ok
+                    timestamp: "2026-01-07T10:30:00Z"
+                    checks:
+                      database:
+                        status: ok
+                        response_time_ms: 15
+                degraded:
+                  summary: Database issues but service alive
+                  value:
+                    status: degraded
+                    timestamp: "2026-01-07T10:30:00Z"
+                    checks:
+                      database:
+                        status: error
+                        response_time_ms: 3000
+                        error: "Connection timeout"
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded"
+                timestamp: "2026-01-07T10:30:00Z"
+        '500':
+          description: Application itself is broken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthError'
+              example:
+                status: error
+                timestamp: "2026-01-07T10:30:00Z"
+                error: "Application initialization failed"
+                
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      description: |
+        Checks if the application is ready to accept traffic. Used by Kubernetes 
+        readiness probes to control load balancer routing. Returns 503 if any 
+        critical dependency is unavailable.
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Service is ready to accept traffic
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Cache-Control:
+              schema:
+                type: string
+                example: no-cache, no-store, must-revalidate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessOk'
+              example:
+                status: ready
+                timestamp: "2026-01-07T10:30:00Z"
+                checks:
+                  database:
+                    status: ok
+                    response_time_ms: 12
+                  redis:
+                    status: ok
+                    response_time_ms: 5
+                  guardian_service:
+                    status: ok
+                    response_time_ms: 45
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded"
+                timestamp: "2026-01-07T10:30:00Z"
+        '503':
+          description: Service not ready (critical dependencies down)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessNotReady'
+              example:
+                status: not_ready
+                timestamp: "2026-01-07T10:30:00Z"
+                checks:
+                  database:
+                    status: ok
+                    response_time_ms: 12
+                  guardian_service:
+                    status: error
+                    response_time_ms: 5000
+                    error: "Connection refused"
+
+  /version:
+    get:
+      tags:
+        - Version
+      summary: Get service version
+      description: |
+        Returns the service version, commit hash, and build information. 
+        Version is read from VERSION file at repository root.
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version information retrieved successfully
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+              example:
+                version: "1.2.3"
+                commit: "abc123def456"
+                build_date: "2026-01-07T08:00:00Z"
+                environment: "production"
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded"
+                timestamp: "2026-01-07T10:30:00Z"
+        '500':
+          description: Failed to read version information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionError'
+              example:
+                error: "VERSION file not found"
+                timestamp: "2026-01-07T10:30:00Z"
+
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error message
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp in UTC
+    HealthOk:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Service health status
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp in UTC
+        checks:
+          type: object
+          description: Health check results for dependencies
+          properties:
+            database:
+              $ref: '#/components/schemas/CheckResult'
+          additionalProperties:
+            $ref: '#/components/schemas/CheckResult'
+            
+    HealthDegraded:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [degraded]
+          description: Service is alive but dependencies are failing
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/CheckResultError'
+          additionalProperties:
+            oneOf:
+              - $ref: '#/components/schemas/CheckResult'
+              - $ref: '#/components/schemas/CheckResultError'
+              
+    HealthError:
+      type: object
+      required:
+        - status
+        - timestamp
+        - error
+      properties:
+        status:
+          type: string
+          enum: [error]
+        timestamp:
+          type: string
+          format: date-time
+        error:
+          type: string
+          description: Error message describing what failed
+          
+    ReadinessOk:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [ready]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          description: Readiness check results for all critical dependencies
+          properties:
+            database:
+              $ref: '#/components/schemas/CheckResult'
+            redis:
+              $ref: '#/components/schemas/CheckResult'
+            guardian_service:
+              $ref: '#/components/schemas/CheckResult'
+            identity_service:
+              $ref: '#/components/schemas/CheckResult'
+          additionalProperties:
+            $ref: '#/components/schemas/CheckResult'
+            
+    ReadinessNotReady:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [not_ready]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              oneOf:
+                - $ref: '#/components/schemas/CheckResult'
+                - $ref: '#/components/schemas/CheckResultError'
+            redis:
+              oneOf:
+                - $ref: '#/components/schemas/CheckResult'
+                - $ref: '#/components/schemas/CheckResultError'
+            guardian_service:
+              oneOf:
+                - $ref: '#/components/schemas/CheckResult'
+                - $ref: '#/components/schemas/CheckResultError'
+          additionalProperties:
+            oneOf:
+              - $ref: '#/components/schemas/CheckResult'
+              - $ref: '#/components/schemas/CheckResultError'
+              
+    CheckResult:
+      type: object
+      required:
+        - status
+        - response_time_ms
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        response_time_ms:
+          type: integer
+          minimum: 0
+          description: Check execution time in milliseconds
+          
+    CheckResultError:
+      type: object
+      required:
+        - status
+        - response_time_ms
+      properties:
+        status:
+          type: string
+          enum: [error]
+        response_time_ms:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+          description: Error message describing the failure
+          
+    Version:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: string
+          pattern: '^\d+\.\d+\.\d+$'
+          description: Semantic version (MAJOR.MINOR.PATCH)
+          example: "1.2.3"
+        commit:
+          type: string
+          description: Git commit hash (short format)
+          example: "abc123def456"
+        build_date:
+          type: string
+          format: date-time
+          description: ISO 8601 build timestamp
+        environment:
+          type: string
+          enum: [development, testing, staging, production]
+          description: Deployment environment
+          
+    VersionError:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error message
+        timestamp:
+          type: string
+          format: date-time

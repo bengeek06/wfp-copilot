@@ -1,0 +1,743 @@
+openapi: 3.0.3
+info:
+  title: Dummies CRUD API
+  description: |
+    Complete CRUD API for the "Dummy" resource, serving as a reference implementation 
+    in wfp-flask-template. Demonstrates JWT authentication, Guardian authorization, 
+    multi-tenancy isolation, pagination, validation, and error handling patterns.
+  version: 1.0.0
+  contact:
+    name: Backend Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api-staging.waterfall.com
+    description: Staging server
+  - url: https://api.waterfall.com
+    description: Production server
+
+tags:
+  - name: Dummies
+    description: CRUD operations for Dummy resources
+
+security:
+  - CookieAuth: []
+
+paths:
+  /v0/dummies:
+    get:
+      tags:
+        - Dummies
+      summary: List dummies
+      description: |
+        Retrieve a paginated list of dummies for the authenticated user's company 
+        with optional sorting. Automatically filters by company_id from JWT token.
+        Requires Guardian LIST permission.
+      operationId: listDummies
+      x-guardian-operation: LIST
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort_by
+          in: query
+          description: Field to sort by
+          required: false
+          schema:
+            type: string
+            enum: [name, created_at, updated_at]
+            default: created_at
+        - name: sort_order
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: X-Correlation-ID
+          in: header
+          description: Request correlation ID for distributed tracing (auto-generated if not provided)
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dummies retrieved successfully (may be empty)
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DummyListResponse'
+              examples:
+                with_data:
+                  summary: Page with 2 dummies
+                  value:
+                    data:
+                      - id: "123e4567-e89b-12d3-a456-426614174000"
+                        name: "Example Dummy"
+                        description: "This is an example dummy resource"
+                        company_id: "987e6543-e21b-12d3-a456-426614174000"
+                        is_active: true
+                        created_at: "2026-01-07T10:00:00Z"
+                        updated_at: "2026-01-07T10:00:00Z"
+                      - id: "223e4567-e89b-12d3-a456-426614174001"
+                        name: "Another Dummy"
+                        description: null
+                        company_id: "987e6543-e21b-12d3-a456-426614174000"
+                        is_active: true
+                        created_at: "2026-01-07T09:30:00Z"
+                        updated_at: "2026-01-07T09:30:00Z"
+                    page: 1
+                    per_page: 20
+                    total: 42
+                    total_pages: 3
+                empty:
+                  summary: Empty result set
+                  value:
+                    data: []
+                    page: 1
+                    per_page: 20
+                    total: 0
+                    total_pages: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Invalid query parameters
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: "Validation failed"
+                errors:
+                  per_page: ["Must be less than or equal to 100"]
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+          
+    post:
+      tags:
+        - Dummies
+      summary: Create dummy
+      description: |
+        Create a new dummy resource for the authenticated user's company. 
+        Name must be unique within the company. Requires Guardian CREATE permission.
+      operationId: createDummy
+      x-guardian-operation: CREATE
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: X-Correlation-ID
+          in: header
+          description: Request correlation ID for distributed tracing
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DummyCreateRequest'
+            examples:
+              with_description:
+                summary: Create with description
+                value:
+                  name: "My New Dummy"
+                  description: "This is a test dummy resource"
+              minimal:
+                summary: Create without description
+                value:
+                  name: "Minimal Dummy"
+      responses:
+        '201':
+          description: Dummy created successfully
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DummyResponse'
+              example:
+                data:
+                  id: "323e4567-e89b-12d3-a456-426614174002"
+                  name: "My New Dummy"
+                  description: "This is a test dummy resource"
+                  company_id: "987e6543-e21b-12d3-a456-426614174000"
+                  is_active: true
+                  created_at: "2026-01-07T11:00:00Z"
+                  updated_at: "2026-01-07T11:00:00Z"
+                message: "Dummy created successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Dummy name already exists in company
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Dummy with this name already exists in your company"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '422':
+          description: Validation errors
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: "Validation failed"
+                errors:
+                  name: ["Field is required"]
+                  description: ["Length must be between 0 and 1000"]
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v0/dummies/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Dummy unique identifier (UUID)
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Correlation-ID
+        in: header
+        description: Request correlation ID for distributed tracing
+        required: false
+        schema:
+          type: string
+          format: uuid
+          
+    get:
+      tags:
+        - Dummies
+      summary: Retrieve dummy
+      description: |
+        Retrieve a single dummy by ID. Must belong to authenticated user's company.
+        Requires Guardian READ permission.
+      operationId: getDummy
+      x-guardian-operation: READ
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Dummy retrieved successfully
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DummyResponse'
+              example:
+                data:
+                  id: "123e4567-e89b-12d3-a456-426614174000"
+                  name: "Example Dummy"
+                  description: "This is an example dummy resource"
+                  company_id: "987e6543-e21b-12d3-a456-426614174000"
+                  is_active: true
+                  created_at: "2026-01-07T10:00:00Z"
+                  updated_at: "2026-01-07T10:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+          
+    patch:
+      tags:
+        - Dummies
+      summary: Update dummy
+      description: |
+        Partially update a dummy. Only provided fields are updated. 
+        Must belong to authenticated user's company. 
+        Requires Guardian UPDATE permission.
+      operationId: updateDummy
+      x-guardian-operation: UPDATE
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DummyUpdateRequest'
+            examples:
+              update_name:
+                summary: Update only name
+                value:
+                  name: "Updated Dummy Name"
+              update_multiple:
+                summary: Update multiple fields
+                value:
+                  name: "Completely Updated"
+                  description: "New description here"
+                  is_active: false
+      responses:
+        '200':
+          description: Dummy updated successfully
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DummyResponse'
+              example:
+                data:
+                  id: "123e4567-e89b-12d3-a456-426614174000"
+                  name: "Updated Dummy Name"
+                  description: "This is an example dummy resource"
+                  company_id: "987e6543-e21b-12d3-a456-426614174000"
+                  is_active: true
+                  created_at: "2026-01-07T10:00:00Z"
+                  updated_at: "2026-01-07T11:30:00Z"
+                message: "Dummy updated successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Updated name conflicts with existing dummy
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Dummy with this name already exists in your company"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '422':
+          description: Validation errors
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: "Validation failed"
+                errors:
+                  name: ["Length must be between 3 and 255"]
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+          
+    delete:
+      tags:
+        - Dummies
+      summary: Delete dummy
+      description: |
+        Soft delete a dummy (sets is_active=false). Must belong to authenticated 
+        user's company. Requires Guardian DELETE permission.
+      operationId: deleteDummy
+      x-guardian-operation: DELETE
+      security:
+        - CookieAuth: []
+      responses:
+        '204':
+          description: Dummy deleted successfully (soft delete)
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content: {}
+        '410':
+          description: Dummy already deleted
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Dummy already deleted"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: |
+        JWT token stored in HTTP-only cookie. Token must contain claims:
+        - user_id (UUID)
+        - company_id (UUID)
+        - email (string)
+
+  headers:
+    X-Correlation-ID:
+      description: Request correlation ID for distributed tracing
+      schema:
+        type: string
+        format: uuid
+    X-RateLimit-Limit:
+      description: Maximum requests per window
+      schema:
+        type: integer
+        example: 100
+    X-RateLimit-Remaining:
+      description: Remaining requests in current window
+      schema:
+        type: integer
+        example: 95
+    X-RateLimit-Reset:
+      description: Unix timestamp when limit resets
+      schema:
+        type: integer
+        format: int64
+        example: 1704628800
+
+  schemas:
+    Dummy:
+      type: object
+      required:
+        - id
+        - name
+        - company_id
+        - is_active
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier
+          readOnly: true
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Dummy name (unique per company)
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Optional description
+        company_id:
+          type: string
+          format: uuid
+          description: Company identifier (from JWT)
+          readOnly: true
+        is_active:
+          type: boolean
+          description: Active status (false if soft-deleted)
+          default: true
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp (UTC)
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC)
+          readOnly: true
+          
+    DummyCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Unique name for the dummy within the company
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Optional description
+          
+    DummyUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Updated name (must be unique in company)
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Updated description (null to clear)
+        is_active:
+          type: boolean
+          description: Active status. Only false allowed for soft delete; reactivation is not permitted via PATCH.
+          enum: [false]
+          
+    DummyResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Dummy'
+        message:
+          type: string
+          description: Optional success message
+          
+    DummyListResponse:
+      type: object
+      required:
+        - data
+        - page
+        - per_page
+        - total
+        - total_pages
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dummy'
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Items per page
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+        total_pages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          
+    Error:
+      type: object
+      required:
+        - message
+        - correlation_id
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+        correlation_id:
+          type: string
+          format: uuid
+          description: Request correlation ID for tracing
+          
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+        - correlation_id
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Field-specific validation errors
+        correlation_id:
+          type: string
+          format: uuid
+          description: Request correlation ID for tracing
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Missing or invalid JWT token"
+            correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            
+    Forbidden:
+      description: Insufficient Guardian permissions
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            list:
+              summary: List permission denied
+              value:
+                message: "Insufficient permissions to list dummies"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            create:
+              summary: Create permission denied
+              value:
+                message: "Insufficient permissions to create dummies"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            read:
+              summary: Read permission denied
+              value:
+                message: "Insufficient permissions to read this dummy"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            update:
+              summary: Update permission denied
+              value:
+                message: "Insufficient permissions to update this dummy"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            delete:
+              summary: Delete permission denied
+              value:
+                message: "Insufficient permissions to delete this dummy"
+                correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+                
+    NotFound:
+      description: Dummy not found or belongs to another company
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Dummy not found"
+            correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Rate limit exceeded. Maximum 100 requests per minute."
+            correlation_id: "550e8400-e29b-41d4-a716-446655440000"
+            
+    InternalServerError:
+      description: Unexpected server error
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Internal server error"
+            correlation_id: "550e8400-e29b-41d4-a716-446655440000"

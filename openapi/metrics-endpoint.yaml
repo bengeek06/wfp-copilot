@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: Prometheus Metrics Endpoint
+  description: |
+    Exposes application, HTTP, and system metrics in Prometheus text exposition format 
+    for scraping by Prometheus monitoring server. Requires API key authentication.
+  version: 1.0.0
+  contact:
+    name: Backend Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api-staging.waterfall.com
+    description: Staging server
+  - url: https://api.waterfall.com
+    description: Production server
+
+tags:
+  - name: Metrics
+    description: Prometheus metrics exposition
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /metrics:
+    get:
+      tags:
+        - Metrics
+      summary: Get Prometheus metrics
+      description: |
+        Exposes application metrics in Prometheus text exposition format. 
+        Requires API key authentication via Authorization header. Scraped by 
+        Prometheus server at configured interval (typically 15-60 seconds).
+        
+        **Metrics included:**
+        - HTTP request count, duration histograms, status codes
+        - System metrics (CPU, memory, threads)
+        - Database connection pool metrics
+        - Python runtime information
+      operationId: getMetrics
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: text/plain; version=0.0.4; charset=utf-8
+              description: Prometheus text exposition format
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus text exposition format
+              examples:
+                full:
+                  $ref: '#/components/examples/PrometheusMetrics'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missing_key:
+                  summary: Authorization header missing
+                  value:
+                    message: "Missing Authorization header"
+                    timestamp: "2026-01-07T10:30:00Z"
+                invalid_key:
+                  summary: Invalid API key
+                  value:
+                    message: "Invalid API key"
+                    timestamp: "2026-01-07T10:30:00Z"
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Rate limit exceeded. Maximum 10 requests per minute."
+                timestamp: "2026-01-07T10:30:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "Failed to collect metrics"
+                timestamp: "2026-01-07T10:30:00Z"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        API key authentication via Authorization header.
+        Format: Authorization: Bearer <METRICS_API_KEY>
+        
+        The API key is configured via the `METRICS_API_KEY` environment variable 
+        and must be at least 32 characters alphanumeric.
+
+  headers:
+    X-RateLimit-Limit:
+      description: Maximum requests per minute
+      schema:
+        type: integer
+        example: 10
+    X-RateLimit-Remaining:
+      description: Remaining requests in current window
+      schema:
+        type: integer
+        example: 9
+    X-RateLimit-Reset:
+      description: Unix timestamp when limit resets
+      schema:
+        type: integer
+        format: int64
+        example: 1704628800
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp in UTC
+          
+  examples:
+    PrometheusMetrics:
+      summary: Complete metrics response
+      description: Example of all metrics exposed by the endpoint
+      value: |
+        # HELP python_info Python platform information
+        # TYPE python_info gauge
+        python_info{implementation="CPython",major="3",minor="11",patchlevel="7",version="3.11.7"} 1.0
+        
+        # HELP flask_http_request_duration_seconds Flask HTTP request duration in seconds
+        # TYPE flask_http_request_duration_seconds histogram
+        flask_http_request_duration_seconds_bucket{le="0.005",method="GET",path="/v0/dummies",status="200"} 145.0
+        flask_http_request_duration_seconds_count{method="GET",path="/v0/dummies",status="200"} 350.0
+        flask_http_request_duration_seconds_sum{method="GET",path="/v0/dummies",status="200"} 8.75
+        
+        # HELP flask_http_request_total Total number of HTTP requests
+        # TYPE flask_http_request_total counter
+        flask_http_request_total{method="GET",status="200"} 1234.0
+        
+        # HELP process_virtual_memory_bytes Virtual memory size in bytes
+        # TYPE process_virtual_memory_bytes gauge
+        process_virtual_memory_bytes 234567890.0
+        
+        # HELP sqlalchemy_pool_size Current size of the connection pool
+        # TYPE sqlalchemy_pool_size gauge
+        sqlalchemy_pool_size 5.0
