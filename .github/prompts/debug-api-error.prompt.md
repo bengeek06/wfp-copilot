@@ -200,7 +200,7 @@ class ProjectCreateSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Project
         exclude = ('id', 'created_at', 'updated_at')
-    
+
     # Add required validation
     name = fields.String(required=True, validate=Length(min=3, max=255))
     #                    ^^^^^^^^^^^^^^ This prevents None values
@@ -240,31 +240,31 @@ class ProjectListResource(Resource):
     def post(self):
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Load and validate
         schema = ProjectCreateSchema()
         try:
             data = schema.load(request.json)
         except ValidationError as e:
             return {"errors": e.messages}, 422
-        
+
         # Check for duplicate BEFORE inserting
         existing = Project.query.filter_by(
             name=data['name'],
             company_id=company_id
         ).first()
-        
+
         if existing:
             return {
                 "error": "Conflict",
                 "message": f"Project '{data['name']}' already exists"
             }, 409  # 409 Conflict
-        
+
         # Safe to create
         data['company_id'] = company_id
         project = Project(**data)
         db.session.add(project)
-        
+
         try:
             db.session.commit()
         except IntegrityError:
@@ -274,11 +274,11 @@ class ProjectListResource(Resource):
                 "error": "Conflict",
                 "message": "Project already exists"
             }, 409
-        
+
         return ProjectSchema().dump(project), 201
 ```
 
-**Prevention**: 
+**Prevention**:
 - Check for duplicates before INSERT
 - Wrap commit in try/except for race conditions
 - Return 409 Conflict (not 500) for duplicates
@@ -355,33 +355,33 @@ class TaskListResource(Resource):
     def post(self):
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         schema = TaskCreateSchema()
         try:
             data = schema.load(request.json)
         except ValidationError as e:
             return {"errors": e.messages}, 422
-        
+
         project_id = data.get('project_id')
-        
+
         # Verify project exists AND belongs to user's company
         project = Project.query.filter_by(
             id=project_id,
             company_id=company_id  # Security: company isolation
         ).first()
-        
+
         if not project:
             return {
                 "error": "Validation Error",
                 "message": "Invalid project_id: project not found or access denied"
             }, 422  # 422 Unprocessable Entity
-        
+
         # Safe to create task
         data['company_id'] = company_id
         task = Task(**data)
         db.session.add(task)
         db.session.commit()
-        
+
         return TaskSchema().dump(task), 201
 ```
 

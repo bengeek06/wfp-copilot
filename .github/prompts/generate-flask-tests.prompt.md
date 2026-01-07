@@ -60,10 +60,10 @@ from src.app.models.${entityName}_model import ${entityName.capitalize()}
 
 class Test${entityName.capitalize()}Model:
     """Test suite for ${entityName.capitalize()} model."""
-    
+
     def test_create_${entityName}_with_required_fields(self, db_session):
         """Test creating ${entityName} with required fields only.
-        
+
         Given: Valid required field data
         When: ${entityName.capitalize()} instance is created
         Then: Instance is created with correct attributes and defaults
@@ -73,7 +73,7 @@ class Test${entityName.capitalize()}Model:
         )
         db_session.add(${entityName})
         db_session.commit()
-        
+
         assert ${entityName}.id is not None
         assert isinstance(${entityName}.id, UUID)
         assert ${entityName}.name == "Test ${entityName.capitalize()}"
@@ -81,10 +81,10 @@ class Test${entityName.capitalize()}Model:
         assert ${entityName}.created_at is not None
         assert isinstance(${entityName}.created_at, datetime)
         assert ${entityName}.updated_at is not None
-    
+
     def test_create_${entityName}_with_all_fields(self, db_session):
         """Test creating ${entityName} with all fields.
-        
+
         Given: Complete field data
         When: ${entityName.capitalize()} instance is created
         Then: All fields are set correctly
@@ -96,14 +96,14 @@ class Test${entityName.capitalize()}Model:
         )
         db_session.add(${entityName})
         db_session.commit()
-        
+
         assert ${entityName}.name == "Complete ${entityName.capitalize()}"
         assert ${entityName}.description == "Test description"
         assert ${entityName}.is_active is False
-    
+
     def test_${entityName}_repr(self, db_session):
         """Test string representation.
-        
+
         Given: ${entityName.capitalize()} instance
         When: __repr__ is called
         Then: Returns human-readable string with key attributes
@@ -111,16 +111,16 @@ class Test${entityName.capitalize()}Model:
         ${entityName} = ${entityName.capitalize()}(name="Test ${entityName.capitalize()}")
         db_session.add(${entityName})
         db_session.commit()
-        
+
         repr_str = repr(${entityName})
-        
+
         assert "Test ${entityName.capitalize()}" in repr_str
         assert str(${entityName}.id) in repr_str
         assert "${entityName.capitalize()}" in repr_str
-    
+
     def test_${entityName}_timestamps_auto_update(self, db_session):
         """Test timestamp automatic updates.
-        
+
         Given: Existing ${entityName}
         When: ${entityName.capitalize()} is updated
         Then: updated_at timestamp changes, created_at remains same
@@ -128,30 +128,30 @@ class Test${entityName.capitalize()}Model:
         ${entityName} = ${entityName.capitalize()}(name="Original Name")
         db_session.add(${entityName})
         db_session.commit()
-        
+
         original_created_at = ${entityName}.created_at
         original_updated_at = ${entityName}.updated_at
-        
+
         # Update
         ${entityName}.name = "Updated Name"
         db_session.commit()
-        
+
         assert ${entityName}.created_at == original_created_at
         assert ${entityName}.updated_at > original_updated_at
-    
+
     def test_validate_name(self, db_session):
         """Test name validation method.
-        
+
         Given: ${entityName.capitalize()} with various name values
         When: validate_name is called
         Then: Returns appropriate validation result
         """
         valid_${entityName} = ${entityName.capitalize()}(name="Valid Name")
         assert valid_${entityName}.validate_name() is True
-        
+
         empty_${entityName} = ${entityName.capitalize()}(name="")
         assert empty_${entityName}.validate_name() is False
-        
+
         whitespace_${entityName} = ${entityName.capitalize()}(name="   ")
         assert whitespace_${entityName}.validate_name() is False
 
@@ -159,10 +159,10 @@ class Test${entityName.capitalize()}Model:
 @pytest.fixture
 def sample_${entityName}(db_session):
     """Fixture providing a sample ${entityName} for testing.
-    
+
     Args:
         db_session: Test database session.
-    
+
     Yields:
         Sample ${entityName.capitalize()} instance.
     """
@@ -173,9 +173,9 @@ def sample_${entityName}(db_session):
     )
     db_session.add(${entityName})
     db_session.commit()
-    
+
     yield ${entityName}
-    
+
     # Cleanup
     db_session.delete(${entityName})
     db_session.commit()
@@ -205,19 +205,19 @@ from src.app.schemas.${entityName}_schema import (
 
 class Test${entityName.capitalize()}CreateSchema:
     """Tests for ${entityName.capitalize()}CreateSchema."""
-    
+
     @pytest.fixture
     def schema(self):
         """Create schema instance.
-        
+
         Returns:
             ${entityName.capitalize()}CreateSchema instance.
         """
         return ${entityName.capitalize()}CreateSchema()
-    
+
     def test_valid_data(self, schema):
         """Test schema with valid complete data.
-        
+
         Given: Valid ${entityName} creation data
         When: load() is called
         Then: Data is validated and returned successfully
@@ -227,87 +227,87 @@ class Test${entityName.capitalize()}CreateSchema:
             "description": "Test description",
             "is_active": True
         }
-        
+
         result = schema.load(data)
-        
+
         assert result["name"] == "Test ${entityName.capitalize()}"
         assert result["description"] == "Test description"
         assert result["is_active"] is True
-    
+
     def test_valid_data_with_defaults(self, schema):
         """Test schema with minimal required data.
-        
+
         Given: Only required fields provided
         When: load() is called
         Then: Data is validated with default values applied
         """
         data = {"name": "Test ${entityName.capitalize()}"}
-        
+
         result = schema.load(data)
-        
+
         assert result["name"] == "Test ${entityName.capitalize()}"
         assert result["is_active"] is True  # Default value
-    
+
     def test_missing_required_name(self, schema):
         """Test schema with missing required name field.
-        
+
         Given: Data without required name field
         When: load() is called
         Then: ValidationError is raised with appropriate message
         """
         data = {"description": "Missing name"}
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "name" in exc_info.value.messages
         assert "required" in str(exc_info.value.messages["name"]).lower()
-    
+
     def test_name_too_short(self, schema):
         """Test name length validation (minimum).
-        
+
         Given: Name shorter than minimum length
         When: load() is called
         Then: ValidationError is raised
         """
         data = {"name": ""}
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "name" in exc_info.value.messages
-    
+
     def test_name_too_long(self, schema):
         """Test name length validation (maximum).
-        
+
         Given: Name longer than maximum length
         When: load() is called
         Then: ValidationError is raised
         """
         data = {"name": "x" * 256}  # Exceeds 255 char limit
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "name" in exc_info.value.messages
-    
+
     def test_name_whitespace_only(self, schema):
         """Test name validation rejects whitespace-only values.
-        
+
         Given: Name with only whitespace
         When: load() is called
         Then: ValidationError is raised
         """
         data = {"name": "   "}
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "name" in exc_info.value.messages
-    
+
     def test_invalid_field_type(self, schema):
         """Test validation with incorrect field types.
-        
+
         Given: Field with wrong type
         When: load() is called
         Then: ValidationError is raised
@@ -316,52 +316,52 @@ class Test${entityName.capitalize()}CreateSchema:
             "name": "Test",
             "is_active": "not-a-boolean"
         }
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "is_active" in exc_info.value.messages
 
 
 class Test${entityName.capitalize()}UpdateSchema:
     """Tests for ${entityName.capitalize()}UpdateSchema."""
-    
+
     @pytest.fixture
     def schema(self):
         """Create schema instance."""
         return ${entityName.capitalize()}UpdateSchema()
-    
+
     def test_valid_partial_update(self, schema):
         """Test schema with partial data.
-        
+
         Given: Only some fields provided
         When: load() is called with partial=True
         Then: Only provided fields are validated
         """
         data = {"name": "Updated Name"}
-        
+
         result = schema.load(data, partial=True)
-        
+
         assert result["name"] == "Updated Name"
         assert "description" not in result
-    
+
     def test_empty_data_rejected(self, schema):
         """Test that empty update is rejected.
-        
+
         Given: No fields provided
         When: load() is called
         Then: ValidationError is raised
         """
         data = {}
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "at least one field" in str(exc_info.value.messages).lower()
-    
+
     def test_all_fields_optional(self, schema):
         """Test that all fields are optional in update.
-        
+
         Given: Any single field
         When: load() is called
         Then: Validation succeeds
@@ -374,15 +374,15 @@ class Test${entityName.capitalize()}UpdateSchema:
 
 class Test${entityName.capitalize()}ReplaceSchema:
     """Tests for ${entityName.capitalize()}ReplaceSchema."""
-    
+
     @pytest.fixture
     def schema(self):
         """Create schema instance."""
         return ${entityName.capitalize()}ReplaceSchema()
-    
+
     def test_valid_complete_data(self, schema):
         """Test schema with all required fields.
-        
+
         Given: All required fields for replacement
         When: load() is called
         Then: Data is validated successfully
@@ -392,53 +392,53 @@ class Test${entityName.capitalize()}ReplaceSchema:
             "description": "New description",
             "is_active": False
         }
-        
+
         result = schema.load(data)
-        
+
         assert result["name"] == "Replaced Name"
         assert result["is_active"] is False
-    
+
     def test_missing_required_fields(self, schema):
         """Test schema rejects incomplete data.
-        
+
         Given: Missing required fields
         When: load() is called
         Then: ValidationError is raised
         """
         data = {"name": "Test"}  # Missing is_active
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "is_active" in exc_info.value.messages
 
 
 class Test${entityName.capitalize()}Schema:
     """Tests for ${entityName.capitalize()}Schema (serialization)."""
-    
+
     @pytest.fixture
     def schema(self):
         """Create schema instance."""
         return ${entityName.capitalize()}Schema()
-    
+
     def test_serialize_${entityName}(self, schema, sample_${entityName}):
         """Test serialization of model instance.
-        
+
         Given: ${entityName.capitalize()} model instance
         When: dump() is called
         Then: Returns dictionary with all fields
         """
         result = schema.dump(sample_${entityName})
-        
+
         assert result["id"] == str(sample_${entityName}.id)
         assert result["name"] == sample_${entityName}.name
         assert result["is_active"] == sample_${entityName}.is_active
         assert "created_at" in result
         assert "updated_at" in result
-    
+
     def test_readonly_fields_not_loaded(self, schema):
         """Test that readonly fields are ignored during load.
-        
+
         Given: Data including readonly fields
         When: load() is attempted
         Then: Readonly fields are ignored or cause error
@@ -448,7 +448,7 @@ class Test${entityName.capitalize()}Schema:
             "name": "Test",
             "created_at": "2024-01-01T00:00:00Z"
         }
-        
+
         # Should either ignore or raise error for readonly fields
         # Behavior depends on schema configuration
         pass  # Implement based on your schema config
@@ -458,7 +458,7 @@ class Test${entityName.capitalize()}Schema:
 def sample_${entityName}(db_session):
     """Fixture for sample ${entityName} instance."""
     from src.app.models.${entityName}_model import ${entityName.capitalize()}
-    
+
     ${entityName} = ${entityName.capitalize()}(
         name="Sample ${entityName.capitalize()}",
         description="For testing",
@@ -466,7 +466,7 @@ def sample_${entityName}(db_session):
     )
     db_session.add(${entityName})
     db_session.commit()
-    
+
     yield ${entityName}
 ```
 
@@ -487,34 +487,34 @@ from flask.testing import FlaskClient
 
 class Test${entityName.capitalize()}ListResource:
     """Integration tests for ${entityName.capitalize()}ListResource."""
-    
+
     def test_get_${entityNamePlural}_success(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test retrieving ${entityName} list.
-        
+
         Given: Authenticated user with LIST permission
         When: GET /${entityNamePlural} is called
         Then: Returns 200 with paginated ${entityName} list
         """
         response = client.get("/v0/${entityNamePlural}", headers=auth_headers)
-        
+
         assert response.status_code == 200
         assert "data" in response.json
         assert isinstance(response.json["data"], list)
         assert "page" in response.json
         assert "per_page" in response.json
         assert "total" in response.json
-    
+
     def test_get_${entityNamePlural}_with_pagination(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test ${entityName} list with pagination parameters.
-        
+
         Given: Pagination query parameters
         When: GET /${entityNamePlural}?page=1&per_page=10 is called
         Then: Returns paginated results with correct page info
@@ -523,11 +523,11 @@ class Test${entityName.capitalize()}ListResource:
             "/v0/${entityNamePlural}?page=1&per_page=10",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["page"] == 1
         assert response.json["per_page"] == 10
-    
+
     def test_get_${entityNamePlural}_with_search(
         self,
         client: FlaskClient,
@@ -535,7 +535,7 @@ class Test${entityName.capitalize()}ListResource:
         sample_${entityName}
     ):
         """Test ${entityName} list with search filter.
-        
+
         Given: Search query parameter
         When: GET /${entityNamePlural}?search=test is called
         Then: Returns filtered results matching search term
@@ -544,28 +544,28 @@ class Test${entityName.capitalize()}ListResource:
             f"/v0/${entityNamePlural}?search={sample_${entityName}.name}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert len(response.json["data"]) >= 1
-    
+
     def test_get_${entityNamePlural}_unauthorized(self, client: FlaskClient):
         """Test ${entityName} list without authentication.
-        
+
         Given: No authentication token
         When: GET /${entityNamePlural} is called
         Then: Returns 401 Unauthorized
         """
         response = client.get("/v0/${entityNamePlural}")
-        
+
         assert response.status_code == 401
-    
+
     def test_create_${entityName}_success(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test creating a new ${entityName}.
-        
+
         Given: Valid ${entityName} data and CREATE permission
         When: POST /${entityNamePlural} is called
         Then: Returns 201 with created ${entityName}
@@ -575,59 +575,59 @@ class Test${entityName.capitalize()}ListResource:
             "description": "Integration test ${entityName}",
             "is_active": True
         }
-        
+
         response = client.post(
             "/v0/${entityNamePlural}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 201
         assert response.json["data"]["name"] == data["name"]
         assert response.json["data"]["description"] == data["description"]
         assert "id" in response.json["data"]
         assert "created_at" in response.json["data"]
-    
+
     def test_create_${entityName}_validation_error(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test creating ${entityName} with invalid data.
-        
+
         Given: Invalid ${entityName} data (missing required field)
         When: POST /${entityNamePlural} is called
         Then: Returns 400 with validation errors
         """
         data = {"description": "Missing name"}
-        
+
         response = client.post(
             "/v0/${entityNamePlural}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 400
         assert "errors" in response.json
         assert "name" in response.json["errors"]
-    
+
     def test_create_${entityName}_unauthorized(self, client: FlaskClient):
         """Test creating ${entityName} without authentication.
-        
+
         Given: No authentication token
         When: POST /${entityNamePlural} is called
         Then: Returns 401 Unauthorized
         """
         data = {"name": "Test ${entityName.capitalize()}"}
-        
+
         response = client.post("/v0/${entityNamePlural}", json=data)
-        
+
         assert response.status_code == 401
 
 
 class Test${entityName.capitalize()}Resource:
     """Integration tests for ${entityName.capitalize()}Resource."""
-    
+
     def test_get_${entityName}_success(
         self,
         client: FlaskClient,
@@ -635,7 +635,7 @@ class Test${entityName.capitalize()}Resource:
         sample_${entityName}
     ):
         """Test retrieving existing ${entityName}.
-        
+
         Given: Existing ${entityName} and READ permission
         When: GET /${entityNamePlural}/<id> is called
         Then: Returns 200 with ${entityName} data
@@ -644,31 +644,31 @@ class Test${entityName.capitalize()}Resource:
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["data"]["id"] == str(sample_${entityName}.id)
         assert response.json["data"]["name"] == sample_${entityName}.name
-    
+
     def test_get_${entityName}_not_found(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test retrieving non-existent ${entityName}.
-        
+
         Given: Non-existent ${entityName} ID
         When: GET /${entityNamePlural}/<id> is called
         Then: Returns 404 Not Found
         """
         fake_id = "00000000-0000-0000-0000-000000000000"
-        
+
         response = client.get(
             f"/v0/${entityNamePlural}/{fake_id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 404
-    
+
     def test_update_${entityName}_success(
         self,
         client: FlaskClient,
@@ -676,23 +676,23 @@ class Test${entityName.capitalize()}Resource:
         sample_${entityName}
     ):
         """Test updating a ${entityName}.
-        
+
         Given: Existing ${entityName} and UPDATE permission
         When: PATCH /${entityNamePlural}/<id> is called
         Then: Returns 200 with updated ${entityName}
         """
         data = {"name": "Updated Name"}
-        
+
         response = client.patch(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["data"]["name"] == "Updated Name"
         assert response.json["data"]["id"] == str(sample_${entityName}.id)
-    
+
     def test_update_${entityName}_validation_error(
         self,
         client: FlaskClient,
@@ -700,21 +700,21 @@ class Test${entityName.capitalize()}Resource:
         sample_${entityName}
     ):
         """Test updating ${entityName} with invalid data.
-        
+
         Given: Invalid update data
         When: PATCH /${entityNamePlural}/<id> is called
         Then: Returns 400 with validation errors
         """
         data = {"name": ""}  # Empty name invalid
-        
+
         response = client.patch(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 400
-    
+
     def test_replace_${entityName}_success(
         self,
         client: FlaskClient,
@@ -722,7 +722,7 @@ class Test${entityName.capitalize()}Resource:
         sample_${entityName}
     ):
         """Test replacing a ${entityName}.
-        
+
         Given: Complete replacement data and UPDATE permission
         When: PUT /${entityNamePlural}/<id> is called
         Then: Returns 200 with replaced ${entityName}
@@ -732,17 +732,17 @@ class Test${entityName.capitalize()}Resource:
             "description": "New description",
             "is_active": False
         }
-        
+
         response = client.put(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["data"]["name"] == data["name"]
         assert response.json["data"]["is_active"] == data["is_active"]
-    
+
     def test_delete_${entityName}_success(
         self,
         client: FlaskClient,
@@ -750,7 +750,7 @@ class Test${entityName.capitalize()}Resource:
         sample_${entityName}
     ):
         """Test deleting a ${entityName}.
-        
+
         Given: Existing ${entityName} and DELETE permission
         When: DELETE /${entityNamePlural}/<id> is called
         Then: Returns 204 No Content
@@ -759,62 +759,62 @@ class Test${entityName.capitalize()}Resource:
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 204
-        
+
         # Verify deletion
         get_response = client.get(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             headers=auth_headers
         )
         assert get_response.status_code == 404
-    
+
     def test_delete_${entityName}_not_found(
         self,
         client: FlaskClient,
         auth_headers: dict
     ):
         """Test deleting non-existent ${entityName}.
-        
+
         Given: Non-existent ${entityName} ID
         When: DELETE /${entityNamePlural}/<id> is called
         Then: Returns 404 Not Found
         """
         fake_id = "00000000-0000-0000-0000-000000000000"
-        
+
         response = client.delete(
             f"/v0/${entityNamePlural}/{fake_id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 404
 
 
 @pytest.fixture
 def sample_${entityName}(app, db_session):
     """Fixture providing sample ${entityName} for testing.
-    
+
     Args:
         app: Flask application instance.
         db_session: Test database session.
-    
+
     Yields:
         Sample ${entityName.capitalize()} instance.
     """
     from src.app.models.${entityName}_model import ${entityName.capitalize()}
-    
+
     ${entityName} = ${entityName.capitalize()}(
         name="Sample ${entityName.capitalize()}",
         description="For integration testing",
         is_active=True
     )
-    
+
     with app.app_context():
         db_session.add(${entityName})
         db_session.commit()
-        
+
         yield ${entityName}
-        
+
         # Cleanup
         try:
             db_session.delete(${entityName})
@@ -826,17 +826,17 @@ def sample_${entityName}(app, db_session):
 @pytest.fixture
 def auth_headers(app):
     """Fixture providing authentication headers.
-    
+
     Args:
         app: Flask application instance.
-    
+
     Returns:
         Dictionary with Authorization header.
     """
     # Generate valid JWT token for testing
     # Implementation depends on your auth setup
     token = "valid-jwt-token"  # Replace with actual token generation
-    
+
     return {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"

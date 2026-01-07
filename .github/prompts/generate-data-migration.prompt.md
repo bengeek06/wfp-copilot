@@ -67,9 +67,9 @@ def upgrade():
         column('status', sa.String),
         column('updated_at', sa.DateTime)
     )
-    
+
     connection = op.get_bind()
-    
+
     # 1. Mark projects with all completed tasks as 'completed'
     connection.execute(
         projects.update()
@@ -94,7 +94,7 @@ def upgrade():
             )
         )
     )
-    
+
     # 2. Mark projects with active tasks as 'in_progress'
     connection.execute(
         projects.update()
@@ -114,7 +114,7 @@ def upgrade():
             )
         )
     )
-    
+
     # 3. Default remaining to 'active'
     connection.execute(
         projects.update()
@@ -124,7 +124,7 @@ def upgrade():
         )
         .where(projects.c.status == None)
     )
-    
+
     # 4. Verify no NULL values remain
     result = connection.execute(
         sa.select([sa.func.count()])
@@ -132,10 +132,10 @@ def upgrade():
         .where(projects.c.status == None)
     )
     null_count = result.scalar()
-    
+
     if null_count > 0:
         raise Exception(f"Migration incomplete: {null_count} projects still have NULL status")
-    
+
     print(f"✓ Backfilled status for all projects")
 
 
@@ -147,9 +147,9 @@ def downgrade():
         column('status', sa.String),
         column('updated_at', sa.DateTime)
     )
-    
+
     connection = op.get_bind()
-    
+
     connection.execute(
         projects.update()
         .values(
@@ -157,7 +157,7 @@ def downgrade():
             updated_at=sa.func.now()
         )
     )
-    
+
     print(f"✓ Rolled back project status backfill")
 ```
 
@@ -195,19 +195,19 @@ depends_on = None
 def upgrade():
     """
     Transform priority: string → integer
-    
+
     Step 1: Add new integer column
     Step 2: Transform data
     Step 3: Drop old column
     Step 4: Rename new column
     """
     connection = op.get_bind()
-    
+
     # Step 1: Add temporary column
     op.add_column('tasks',
         sa.Column('priority_int', sa.Integer(), nullable=True)
     )
-    
+
     # Step 2: Transform data (string → integer)
     tasks = table('tasks',
         column('id', sa.String),
@@ -215,14 +215,14 @@ def upgrade():
         column('priority_int', sa.Integer),
         column('updated_at', sa.DateTime)
     )
-    
+
     # Mapping: string → integer
     priority_map = {
         'low': 1,
         'medium': 2,
         'high': 3
     }
-    
+
     for string_val, int_val in priority_map.items():
         connection.execute(
             tasks.update()
@@ -232,7 +232,7 @@ def upgrade():
             )
             .where(tasks.c.priority == string_val)
         )
-    
+
     # Handle NULL or unexpected values (default to medium)
     connection.execute(
         tasks.update()
@@ -247,7 +247,7 @@ def upgrade():
             )
         )
     )
-    
+
     # Verify transformation
     result = connection.execute(
         sa.select([sa.func.count()])
@@ -255,19 +255,19 @@ def upgrade():
         .where(tasks.c.priority_int == None)
     )
     null_count = result.scalar()
-    
+
     if null_count > 0:
         raise Exception(f"Migration incomplete: {null_count} tasks have NULL priority_int")
-    
+
     # Step 3: Drop old column
     op.drop_column('tasks', 'priority')
-    
+
     # Step 4: Rename new column
     op.alter_column('tasks', 'priority_int', new_column_name='priority')
-    
+
     # Step 5: Set NOT NULL constraint
     op.alter_column('tasks', 'priority', nullable=False)
-    
+
     print("✓ Transformed priority from string to integer")
 
 
@@ -276,31 +276,31 @@ def downgrade():
     Rollback: integer → string
     """
     connection = op.get_bind()
-    
+
     # Step 1: Remove NOT NULL
     op.alter_column('tasks', 'priority', nullable=True)
-    
+
     # Step 2: Rename to temp
     op.alter_column('tasks', 'priority', new_column_name='priority_int')
-    
+
     # Step 3: Add string column
     op.add_column('tasks',
         sa.Column('priority', sa.String(length=20), nullable=True)
     )
-    
+
     # Step 4: Transform back (integer → string)
     tasks = table('tasks',
         column('priority', sa.String),
         column('priority_int', sa.Integer),
         column('updated_at', sa.DateTime)
     )
-    
+
     priority_map = {
         1: 'low',
         2: 'medium',
         3: 'high'
     }
-    
+
     for int_val, string_val in priority_map.items():
         connection.execute(
             tasks.update()
@@ -310,13 +310,13 @@ def downgrade():
             )
             .where(tasks.c.priority_int == int_val)
         )
-    
+
     # Step 5: Drop integer column
     op.drop_column('tasks', 'priority_int')
-    
+
     # Step 6: Set NOT NULL
     op.alter_column('tasks', 'priority', nullable=False)
-    
+
     print("✓ Rolled back priority to string format")
 ```
 
@@ -350,18 +350,18 @@ def upgrade():
     - priority 1 (low): 2 hours
     - priority 2 (medium): 4 hours
     - priority 3 (high): 8 hours
-    
+
     Process in batches for large datasets.
     """
     connection = op.get_bind()
-    
+
     tasks = table('tasks',
         column('id', sa.String),
         column('priority', sa.Integer),
         column('estimated_hours', sa.Float),
         column('updated_at', sa.DateTime)
     )
-    
+
     # Get total count
     result = connection.execute(
         sa.select([sa.func.count()])
@@ -369,16 +369,16 @@ def upgrade():
         .where(tasks.c.estimated_hours == None)
     )
     total = result.scalar()
-    
+
     if total == 0:
         print("✓ No tasks to backfill")
         return
-    
+
     print(f"Backfilling {total} tasks in batches of {BATCH_SIZE}...")
-    
+
     processed = 0
     offset = 0
-    
+
     while True:
         # Get batch of task IDs
         result = connection.execute(
@@ -388,16 +388,16 @@ def upgrade():
             .limit(BATCH_SIZE)
             .offset(offset)
         )
-        
+
         batch = result.fetchall()
-        
+
         if not batch:
             break
-        
+
         # Update batch by priority
         for priority, hours in [(1, 2.0), (2, 4.0), (3, 8.0)]:
             task_ids = [row[0] for row in batch if row[1] == priority]
-            
+
             if task_ids:
                 connection.execute(
                     tasks.update()
@@ -407,13 +407,13 @@ def upgrade():
                     )
                     .where(tasks.c.id.in_(task_ids))
                 )
-        
+
         processed += len(batch)
         progress = (processed / total) * 100
         print(f"  Progress: {processed}/{total} ({progress:.1f}%)")
-        
+
         offset += BATCH_SIZE
-    
+
     # Verify
     result = connection.execute(
         sa.select([sa.func.count()])
@@ -421,10 +421,10 @@ def upgrade():
         .where(tasks.c.estimated_hours == None)
     )
     remaining = result.scalar()
-    
+
     if remaining > 0:
         raise Exception(f"Migration incomplete: {remaining} tasks still NULL")
-    
+
     print(f"✓ Backfilled estimated_hours for {processed} tasks")
 
 
@@ -433,12 +433,12 @@ def downgrade():
     Rollback: Clear estimated_hours
     """
     connection = op.get_bind()
-    
+
     tasks = table('tasks',
         column('estimated_hours', sa.Float),
         column('updated_at', sa.DateTime)
     )
-    
+
     connection.execute(
         tasks.update()
         .values(
@@ -446,7 +446,7 @@ def downgrade():
             updated_at=sa.func.now()
         )
     )
-    
+
     print("✓ Rolled back estimated_hours backfill")
 ```
 
@@ -479,74 +479,74 @@ new_values = ['todo', 'in_progress', 'blocked', 'done']
 def upgrade():
     """
     Add 'blocked' status to task_status enum.
-    
+
     PostgreSQL doesn't support ALTER TYPE ADD VALUE in transaction,
     so we recreate the enum.
     """
     # For PostgreSQL: Use ALTER TYPE (outside transaction)
     # Note: This won't work in transaction, handle appropriately
-    
+
     # Option 1: ALTER TYPE (PostgreSQL 9.1+)
     # Run with: op.execute("ALTER TYPE task_status ADD VALUE 'blocked' AFTER 'in_progress'")
-    
+
     # Option 2: Recreate enum (works in all databases)
     # Step 1: Create new enum
     op.execute("ALTER TABLE tasks ALTER COLUMN status TYPE VARCHAR(20)")
-    
+
     # Step 2: Drop old enum if exists
     op.execute("DROP TYPE IF EXISTS task_status")
-    
+
     # Step 3: Create new enum with added value
     task_status_enum = sa.Enum(*new_values, name='task_status')
     task_status_enum.create(op.get_bind(), checkfirst=True)
-    
+
     # Step 4: Convert column back to enum
     op.execute(
         "ALTER TABLE tasks ALTER COLUMN status TYPE task_status "
         "USING status::task_status"
     )
-    
+
     print("✓ Added 'blocked' to task_status enum")
 
 
 def downgrade():
     """
     Remove 'blocked' status.
-    
+
     WARNING: If any tasks have 'blocked' status, this will fail.
     """
     connection = op.get_bind()
-    
+
     # Check if any tasks are blocked
     result = connection.execute(
         sa.text("SELECT COUNT(*) FROM tasks WHERE status = 'blocked'")
     )
     blocked_count = result.scalar()
-    
+
     if blocked_count > 0:
         # Option 1: Fail (safe)
         raise Exception(
             f"Cannot remove 'blocked' status: {blocked_count} tasks are blocked. "
             f"Migrate these tasks to another status first."
         )
-        
+
         # Option 2: Auto-migrate to 'todo' (dangerous)
         # connection.execute(
         #     "UPDATE tasks SET status = 'todo' WHERE status = 'blocked'"
         # )
-    
+
     # Recreate enum without 'blocked'
     op.execute("ALTER TABLE tasks ALTER COLUMN status TYPE VARCHAR(20)")
     op.execute("DROP TYPE IF EXISTS task_status")
-    
+
     task_status_enum = sa.Enum(*old_values, name='task_status')
     task_status_enum.create(op.get_bind(), checkfirst=True)
-    
+
     op.execute(
         "ALTER TABLE tasks ALTER COLUMN status TYPE task_status "
         "USING status::task_status"
     )
-    
+
     print("✓ Removed 'blocked' from task_status enum")
 ```
 
@@ -577,13 +577,13 @@ depends_on = None
 def upgrade():
     """
     Migrate metadata JSON structure:
-    
+
     Old format:
     {
       "tags": "tag1,tag2,tag3",
       "owner": "user@example.com"
     }
-    
+
     New format:
     {
       "tags": ["tag1", "tag2", "tag3"],
@@ -594,28 +594,28 @@ def upgrade():
     }
     """
     connection = op.get_bind()
-    
+
     projects = table('projects',
         column('id', sa.String),
         column('metadata', JSONB),
         column('updated_at', sa.DateTime)
     )
-    
+
     # Get all projects with metadata
     result = connection.execute(
         sa.select([projects.c.id, projects.c.metadata])
         .where(projects.c.metadata != None)
     )
-    
+
     migrated = 0
-    
+
     for project_id, metadata in result:
         if not metadata:
             continue
-        
+
         # Transform metadata
         new_metadata = {}
-        
+
         # Transform tags: string → array
         if 'tags' in metadata and isinstance(metadata['tags'], str):
             new_metadata['tags'] = [
@@ -624,7 +624,7 @@ def upgrade():
             ]
         elif 'tags' in metadata:
             new_metadata['tags'] = metadata['tags']
-        
+
         # Transform owner: string → object
         if 'owner' in metadata and isinstance(metadata['owner'], str):
             new_metadata['owner'] = {
@@ -633,12 +633,12 @@ def upgrade():
             }
         elif 'owner' in metadata:
             new_metadata['owner'] = metadata['owner']
-        
+
         # Preserve other fields
         for key, value in metadata.items():
             if key not in ('tags', 'owner'):
                 new_metadata[key] = value
-        
+
         # Update project
         connection.execute(
             projects.update()
@@ -648,9 +648,9 @@ def upgrade():
             )
             .where(projects.c.id == project_id)
         )
-        
+
         migrated += 1
-    
+
     print(f"✓ Migrated metadata for {migrated} projects")
 
 
@@ -659,43 +659,43 @@ def downgrade():
     Rollback: array → string, object → string
     """
     connection = op.get_bind()
-    
+
     projects = table('projects',
         column('id', sa.String),
         column('metadata', JSONB),
         column('updated_at', sa.DateTime)
     )
-    
+
     result = connection.execute(
         sa.select([projects.c.id, projects.c.metadata])
         .where(projects.c.metadata != None)
     )
-    
+
     migrated = 0
-    
+
     for project_id, metadata in result:
         if not metadata:
             continue
-        
+
         old_metadata = {}
-        
+
         # Transform tags: array → string
         if 'tags' in metadata and isinstance(metadata['tags'], list):
             old_metadata['tags'] = ','.join(metadata['tags'])
         elif 'tags' in metadata:
             old_metadata['tags'] = metadata['tags']
-        
+
         # Transform owner: object → string
         if 'owner' in metadata and isinstance(metadata['owner'], dict):
             old_metadata['owner'] = metadata['owner'].get('email', '')
         elif 'owner' in metadata:
             old_metadata['owner'] = metadata['owner']
-        
+
         # Preserve other fields
         for key, value in metadata.items():
             if key not in ('tags', 'owner'):
                 old_metadata[key] = value
-        
+
         connection.execute(
             projects.update()
             .values(
@@ -704,9 +704,9 @@ def downgrade():
             )
             .where(projects.c.id == project_id)
         )
-        
+
         migrated += 1
-    
+
     print(f"✓ Rolled back metadata for {migrated} projects")
 ```
 
@@ -736,21 +736,21 @@ depends_on = None
 def upgrade():
     """
     Delete archived projects older than 2 years.
-    
+
     WARNING: This permanently deletes data.
     Ensure backups exist before running.
     """
     connection = op.get_bind()
-    
+
     projects = table('projects',
         column('id', sa.String),
         column('status', sa.String),
         column('updated_at', sa.DateTime)
     )
-    
+
     # Calculate cutoff date
     cutoff_date = datetime.utcnow() - timedelta(days=730)  # 2 years
-    
+
     # Count projects to delete
     result = connection.execute(
         sa.select([sa.func.count()])
@@ -763,13 +763,13 @@ def upgrade():
         )
     )
     count_to_delete = result.scalar()
-    
+
     if count_to_delete == 0:
         print("✓ No archived projects to clean up")
         return
-    
+
     print(f"⚠️  Deleting {count_to_delete} archived projects older than {cutoff_date.date()}")
-    
+
     # Delete projects (cascade will delete tasks)
     connection.execute(
         projects.delete()
@@ -780,7 +780,7 @@ def upgrade():
             )
         )
     )
-    
+
     print(f"✓ Deleted {count_to_delete} archived projects")
 
 

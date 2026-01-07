@@ -46,10 +46,10 @@ from .. import db
 
 class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
     """${entityName.capitalize()} database model.
-    
+
     Represents ${entityName} entity in the database with automatic
     UUID generation and timestamp tracking.
-    
+
     Attributes:
         id: Unique UUID identifier (from UUIDMixin).
         created_at: Creation timestamp (from TimestampMixin).
@@ -58,9 +58,9 @@ class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
         description: Optional description text.
         is_active: Active status flag.
     """
-    
+
     __tablename__ = "${tableName}"
-    
+
     # Required fields
     name: Mapped[str] = mapped_column(
         String(255),
@@ -68,14 +68,14 @@ class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
         index=True,
         comment="${entityName.capitalize()} display name"
     )
-    
+
     # Optional fields
     description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Optional description"
     )
-    
+
     # Boolean flags
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -83,24 +83,24 @@ class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
         nullable=False,
         comment="Active status flag"
     )
-    
+
     # Indexes and constraints
     __table_args__ = (
         Index("idx_${entityName}_name_active", "name", "is_active"),
         UniqueConstraint("name", name="uq_${entityName}_name"),
     )
-    
+
     def __repr__(self) -> str:
         """String representation for debugging.
-        
+
         Returns:
             Human-readable string with key attributes.
         """
         return f"<${entityName.capitalize()}(id={self.id}, name={self.name})>"
-    
+
     def validate_name(self) -> bool:
         """Validate name field.
-        
+
         Returns:
             True if name is valid, False otherwise.
         """

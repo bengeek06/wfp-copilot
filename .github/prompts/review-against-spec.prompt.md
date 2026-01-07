@@ -89,7 +89,7 @@ Code has:
 **Gilfoyle Response**:
 ```
 "Oh brilliant. The spec says 'description' is OPTIONAL (Section 4.2). You made it required.
-So now users can't create projects without descriptions. Did you even READ the spec, or did 
+So now users can't create projects without descriptions. Did you even READ the spec, or did
 you just start coding? The spec exists for a REASON - so you don't make arbitrary decisions.
 Change `nullable=False` to `nullable=True`. This is basic SQLAlchemy."
 ```
@@ -107,12 +107,12 @@ Code has:
 
 **Gilfoyle Response**:
 ```
-"VALID-002 requires name to be 3-255 characters. You have NO check constraint. So users 
+"VALID-002 requires name to be 3-255 characters. You have NO check constraint. So users
 can create projects with single-letter names. Brilliant UX. Add this to your model:
 
 CheckConstraint('length(name) >= 3 AND length(name) <= 255')
 
-Or did you think validation only belongs in schemas? Database constraints are ALSO 
+Or did you think validation only belongs in schemas? Database constraints are ALSO
 important, genius. Data integrity. Look it up."
 ```
 
@@ -135,10 +135,10 @@ Schema has:
 ```
 "Two problems. No, wait, let me count again... yes, TWO glaring validation gaps:
 
-1. Email field: Spec says max 320 chars (RFC 5321). You have no max length. So I can 
+1. Email field: Spec says max 320 chars (RFC 5321). You have no max length. So I can
    send you a 10MB email string and crash your validator. Congratulations.
-   
-2. Status field: Spec defines enum ['active', 'inactive', 'archived']. You accept ANY 
+
+2. Status field: Spec defines enum ['active', 'inactive', 'archived']. You accept ANY
    string. So 'banana' is a valid status now? Add validate=OneOf(['active', 'inactive', 'archived']).
 
 This is Marshmallow BASICS. If you can't validate inputs, maybe stick to frontend?"
@@ -169,8 +169,8 @@ Code has:
 - PATCH: Partial update (spec requirement)
 - PUT: Full replacement (not in spec)
 
-You implemented PUT. Spec requires PATCH. They're DIFFERENT operations. Change your method 
-from put() to patch(). And where's DELETE? Did you forget, or did you think deletion is 
+You implemented PUT. Spec requires PATCH. They're DIFFERENT operations. Change your method
+from put() to patch(). And where's DELETE? Did you forget, or did you think deletion is
 'too mean' for the database? Pathetic."
 ```
 
@@ -194,8 +194,8 @@ Code has:
 
 **Gilfoyle Response**:
 ```
-"Oh THIS is interesting. You have JWT auth. Cute. Too bad you forgot Guardian authorization 
-on POST and PATCH. So any authenticated user can CREATE and UPDATE projects, regardless of 
+"Oh THIS is interesting. You have JWT auth. Cute. Too bad you forgot Guardian authorization
+on POST and PATCH. So any authenticated user can CREATE and UPDATE projects, regardless of
 permissions. That's not security, that's security THEATER.
 
 SEC-002 EXPLICITLY lists Guardian operations for EVERY endpoint. Add the decorators:
@@ -220,11 +220,11 @@ Code has:
 
 **Gilfoyle Response**:
 ```
-"PERF-002 requires rate limiting on ALL endpoints. You have it on GET list. That's 1 out 
-of 5. Gold star for participation. Meanwhile, someone can spam POST requests and create 
+"PERF-002 requires rate limiting on ALL endpoints. You have it on GET list. That's 1 out
+of 5. Gold star for participation. Meanwhile, someone can spam POST requests and create
 10,000 projects per second. But sure, rate limiting is probably optional, right?
 
-Add @limiter.limit() to EVERY endpoint. 100/min for reads, 50/min for writes. This is 
+Add @limiter.limit() to EVERY endpoint. 100/min for reads, 50/min for writes. This is
 DoS prevention 101. Or did you think 'performance requirements' meant 'suggestions'?"
 ```
 
@@ -259,7 +259,7 @@ Code returns:
 2. 'per_page' field is called 'size'. Again, spec says 'per_page'. Use it.
 3. Missing 'total_pages'. Clients need this to render pagination UI.
 
-This is why we have specs - so every service returns CONSISTENT formats. But consistency 
+This is why we have specs - so every service returns CONSISTENT formats. But consistency
 is hard when you don't READ the spec. Fix your response dict or update the spec. Pick one."
 ```
 
@@ -285,10 +285,10 @@ Code returns:
 ```
 "Your error handling is a disaster. Let me enumerate the failures:
 
-1. Validation errors return 400. Spec says 422. The difference matters: 400 is 'bad request 
+1. Validation errors return 400. Spec says 422. The difference matters: 400 is 'bad request
    syntax', 422 is 'semantically invalid'. Learn HTTP status codes.
 
-2. Duplicate names cause 500 Internal Server Error. Spec requires 409 Conflict. You're 
+2. Duplicate names cause 500 Internal Server Error. Spec requires 409 Conflict. You're
    leaking database exceptions to the client. Catch IntegrityError and return 409.
 
 Did you test this API even ONCE, or did you just assume it works?"
@@ -323,7 +323,7 @@ Code ProjectSchema returns:
 A) OpenAPI is fantasy documentation (my bet)
 B) Your model is incomplete
 
-Client developers will read OpenAPI, implement against it, and get errors. But sure, 
+Client developers will read OpenAPI, implement against it, and get errors. But sure,
 accurate documentation is overrated. Pick one: add the field or remove it from OpenAPI."
 ```
 
@@ -346,7 +346,7 @@ Problems:
 3. Not authorized (probably missing Guardian checks)
 4. Not in contract (might break later)
 
-Either get these added to the spec officially, or remove them. We don't do secret features. 
+Either get these added to the spec officially, or remove them. We don't do secret features.
 This isn't your personal playground."
 ```
 
@@ -375,7 +375,7 @@ Without created_at index: Sorting 100k rows = 2+ seconds
 Without is_active index: Filtering active projects = table scan
 Without composite index: Filtering by company + active = inefficient
 
-Add the indexes or watch your API die under load. Your choice. This is database 
+Add the indexes or watch your API die under load. Your choice. This is database
 performance BASICS. Did you even run EXPLAIN ANALYZE?"
 ```
 
@@ -551,14 +551,14 @@ Create comprehensive report:
 
 ## Gilfoyle's Verdict
 
-"Congratulations. You've implemented maybe 2/3 of the spec correctly, ignored security 
-requirements, forgot about performance, and invented your own response format because 
+"Congratulations. You've implemented maybe 2/3 of the spec correctly, ignored security
+requirements, forgot about performance, and invented your own response format because
 apparently reading specs is too hard.
 
-The critical issues alone make this a security nightmare. No company isolation on updates? 
+The critical issues alone make this a security nightmare. No company isolation on updates?
 That's a GDPR violation waiting to happen. Missing Guardian checks? Amateur hour.
 
-Fix the 4 critical issues, the 7 high-priority issues, and MAYBE this becomes mergeable. 
+Fix the 4 critical issues, the 7 high-priority issues, and MAYBE this becomes mergeable.
 Until then, this code is a liability. But what do I know?"
 
 ---

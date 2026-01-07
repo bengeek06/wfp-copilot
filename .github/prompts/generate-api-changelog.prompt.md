@@ -120,13 +120,13 @@ New features, endpoints, fields, capabilities:
   - Request body: `{"name": "New Project Name", "include_tasks": true}`
   - Response: 201 Created with duplicated project
   - Spec: [REQ-DUP-001](link-to-spec)
-  
+
 - **New field**: `tags` array in Project schema
   - Type: `string[]`
   - Example: `["frontend", "urgent", "q1-2026"]`
   - Nullable: true
   - Spec: [REQ-TAGS-001](link-to-spec)
-  
+
 - **Webhook events**: Real-time notifications for project changes
   - Events: `project.created`, `project.updated`, `project.deleted`
   - Configuration: `POST /webhooks` endpoint
@@ -142,12 +142,12 @@ Modifications to existing functionality:
   - Added database indexes on `company_id` and `status`
   - Implemented Redis caching for frequently accessed projects
   - Impact: No API changes, fully backward compatible
-  
+
 - **Validation enhancement**: Stricter validation for `email` fields
   - Now validates against RFC 5322 standard
   - Rejects invalid formats with 422 error
   - Impact: May reject previously accepted invalid emails
-  
+
 - **Default value change**: `per_page` default increased from 20 to 50
   - Old: `GET /projects` returned 20 items by default
   - New: `GET /projects` returns 50 items by default
@@ -165,14 +165,14 @@ Features marked for future removal:
   - **Removal date**: v2.0.0 (estimated 2026-06-01)
   - **Migration guide**: See [Migration from stats to analytics](#migration-stats-to-analytics)
   - **Impact**: Stats endpoint still works but returns deprecation warning in headers
-  
+
 - **Field**: `priority` string values in Task schema (deprecated in v1.2.0)
   - **Old format**: `"priority": "medium"` (string)
   - **New format**: `"priority": 2` (integer: 1=low, 2=medium, 3=high)
   - **Removal date**: v2.0.0 (estimated 2026-06-01)
   - **Migration guide**: Update clients to use integer values
   - **Impact**: API accepts both formats in v1.x, will remove string support in v2.0.0
-  
+
 - **Header**: `X-API-Version` header (deprecated in v1.1.0)
   - **Replacement**: Use URL versioning (`/v1/projects` instead of `/projects`)
   - **Removal date**: v2.0.0
@@ -187,12 +187,12 @@ Features removed in this version:
   - **Reason**: Too dangerous, accidental bulk deletions
   - **Alternative**: Delete projects individually or use bulk delete with explicit IDs
   - **Breaking change**: Clients using this endpoint will receive 404
-  
+
 - **Field**: `legacy_id` in Project schema (removed in v2.0.0)
   - **Reason**: Migration from old system complete
   - **Impact**: Field no longer returned in responses
   - **Breaking change**: Clients reading this field will receive null
-  
+
 - **Query parameter**: `include_archived` (removed in v2.0.0)
   - **Reason**: Replaced by `status` filter
   - **Alternative**: Use `?status=archived` or `?status=active,archived`
@@ -208,12 +208,12 @@ Bug fixes:
   - **Issue**: [#123](link-to-issue)
   - **Impact**: Pagination now works correctly with all sort fields
   - **Version**: Affects v1.0.0 - v1.1.2, fixed in v1.2.0
-  
+
 - **Bug**: Corrected timezone handling for `created_at` timestamps
   - **Issue**: Timestamps were returned in server timezone instead of UTC
   - **Impact**: All timestamps now consistently in UTC with 'Z' suffix
   - **Version**: Affects v1.0.0 - v1.1.5, fixed in v1.2.0
-  
+
 - **Bug**: Fixed 500 error when updating project with `description: null`
   - **Issue**: [#145](link-to-issue)
   - **Impact**: Null descriptions now accepted (clears existing description)
@@ -230,13 +230,13 @@ Security-related changes:
   - Register: 5 attempts per hour per IP
   - Impact: Prevents brute-force attacks
   - Response: 429 Too Many Requests when limit exceeded
-  
+
 - **CSRF protection**: Implemented CSRF tokens for state-changing operations
   - All POST, PATCH, PUT, DELETE requests require CSRF token
   - Token provided in response to GET requests
   - Impact: Clients must include `X-CSRF-Token` header
   - Migration: Update clients to send CSRF token
-  
+
 - **Input validation**: Enhanced SQL injection prevention
   - All query parameters properly sanitized
   - Impact: No API changes, improved security

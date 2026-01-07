@@ -33,10 +33,10 @@ from typing import Any
 
 class UserSchema(Schema):
     """Base schema for user serialization.
-    
+
     Used for serializing user data in responses. Includes all
     user fields that should be exposed in the API.
-    
+
     Attributes:
         id: Unique user identifier.
         email: User email address.
@@ -45,14 +45,14 @@ class UserSchema(Schema):
         created_at: Account creation timestamp.
         updated_at: Last update timestamp.
     """
-    
+
     id = fields.Int(dump_only=True)
     email = fields.Email(required=True)
     username = fields.Str(required=True, validate=validate.Length(min=3, max=50))
     is_active = fields.Bool(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
-    
+
     class Meta:
         """Schema configuration."""
         ordered = True
@@ -61,10 +61,10 @@ class UserSchema(Schema):
 
 class UserCreateSchema(Schema):
     """Schema for user creation.
-    
+
     Validates data for creating new users. Includes required
     fields and specific validation rules for user registration.
-    
+
     Attributes:
         email: User email (required, unique).
         username: User display name (required).
@@ -72,7 +72,7 @@ class UserCreateSchema(Schema):
         first_name: User's first name (optional).
         last_name: User's last name (optional).
     """
-    
+
     email = fields.Email(
         required=True,
         validate=validate.Length(max=255),
@@ -81,7 +81,7 @@ class UserCreateSchema(Schema):
             "invalid": "Invalid email address format"
         }
     )
-    
+
     username = fields.Str(
         required=True,
         validate=[
@@ -92,62 +92,62 @@ class UserCreateSchema(Schema):
             )
         ]
     )
-    
+
     password = fields.Str(
         required=True,
         load_only=True,
         validate=validate.Length(min=8, max=128),
         error_messages={"required": "Password is required"}
     )
-    
+
     first_name = fields.Str(validate=validate.Length(max=100))
     last_name = fields.Str(validate=validate.Length(max=100))
-    
+
     @validates("password")
     def validate_password_strength(self, value: str) -> None:
         """Validate password strength.
-        
+
         Args:
             value: Password to validate.
-            
+
         Raises:
             ValidationError: If password doesn't meet requirements.
         """
         if not any(char.isdigit() for char in value):
             raise ValidationError("Password must contain at least one digit")
-        
+
         if not any(char.isupper() for char in value):
             raise ValidationError("Password must contain at least one uppercase letter")
-        
+
         if not any(char.islower() for char in value):
             raise ValidationError("Password must contain at least one lowercase letter")
-        
+
         if not any(char in "!@#$%^&*()_+-=[]{}|;:,.<>?" for char in value):
             raise ValidationError("Password must contain at least one special character")
-    
+
     @validates("email")
     def validate_email_domain(self, value: str) -> None:
         """Validate email domain if needed.
-        
+
         Args:
             value: Email to validate.
-            
+
         Raises:
             ValidationError: If email domain is blacklisted.
         """
         blacklisted_domains = ["tempmail.com", "throwaway.email"]
         domain = value.split("@")[1].lower()
-        
+
         if domain in blacklisted_domains:
             raise ValidationError(f"Email domain {domain} is not allowed")
-    
+
     @validates_schema
     def validate_schema(self, data: dict, **kwargs) -> None:
         """Validate entire schema for cross-field validation.
-        
+
         Args:
             data: Dictionary of validated data.
-            
+
         Raises:
             ValidationError: If cross-field validation fails.
         """
@@ -159,7 +159,7 @@ class UserCreateSchema(Schema):
                     "Username cannot be the same as email address",
                     field_name="username"
                 )
-    
+
     class Meta:
         """Schema configuration."""
         ordered = True
@@ -167,10 +167,10 @@ class UserCreateSchema(Schema):
 
 class UserUpdateSchema(Schema):
     """Schema for user updates.
-    
+
     Validates data for updating existing users. All fields are
     optional to support partial updates (PATCH).
-    
+
     Attributes:
         email: New email address (optional).
         username: New username (optional).
@@ -178,29 +178,29 @@ class UserUpdateSchema(Schema):
         last_name: Updated last name (optional).
         is_active: Account status (optional, admin only).
     """
-    
+
     email = fields.Email(validate=validate.Length(max=255))
-    
+
     username = fields.Str(
         validate=[
             validate.Length(min=3, max=50),
             validate.Regexp(r'^[a-zA-Z0-9_]+$')
         ]
     )
-    
+
     first_name = fields.Str(validate=validate.Length(max=100))
     last_name = fields.Str(validate=validate.Length(max=100))
     is_active = fields.Bool()
-    
+
     @validates("email")
     def validate_email_domain(self, value: str) -> None:
         """Validate email domain."""
         blacklisted_domains = ["tempmail.com", "throwaway.email"]
         domain = value.split("@")[1].lower()
-        
+
         if domain in blacklisted_domains:
             raise ValidationError(f"Email domain {domain} is not allowed")
-    
+
     class Meta:
         """Schema configuration."""
         ordered = True
@@ -208,10 +208,10 @@ class UserUpdateSchema(Schema):
 
 class UserQuerySchema(Schema):
     """Schema for query parameter validation.
-    
+
     Validates query parameters for list endpoints.
     Used for filtering, sorting and pagination.
-    
+
     Attributes:
         page: Page number (min: 1).
         per_page: Items per page (min: 1, max: 100).
@@ -219,33 +219,33 @@ class UserQuerySchema(Schema):
         sort_by: Field to sort by.
         order: Sort order (asc/desc).
     """
-    
+
     page = fields.Int(
         missing=1,
         validate=validate.Range(min=1),
         error_messages={"invalid": "Page must be a positive integer"}
     )
-    
+
     per_page = fields.Int(
         missing=20,
         validate=validate.Range(min=1, max=100),
         error_messages={"invalid": "Items per page must be between 1 and 100"}
     )
-    
+
     is_active = fields.Bool()
-    
+
     sort_by = fields.Str(
         validate=validate.OneOf(
             ["email", "username", "created_at"],
             error="Invalid sort field"
         )
     )
-    
+
     order = fields.Str(
         validate=validate.OneOf(["asc", "desc"]),
         missing="asc"
     )
-    
+
     class Meta:
         """Schema configuration."""
         ordered = True
@@ -404,16 +404,16 @@ metadata = fields.Dict(keys=fields.Str(), values=fields.Str())
 @validates("username")
 def validate_username(self, value: str) -> None:
     """Validate username uniqueness or format.
-    
+
     Args:
         value: Username to validate.
-        
+
     Raises:
         ValidationError: If validation fails.
     """
     if len(value) < 3:
         raise ValidationError("Username must be at least 3 characters")
-    
+
     if not value[0].isalpha():
         raise ValidationError("Username must start with a letter")
 ```
@@ -423,10 +423,10 @@ def validate_username(self, value: str) -> None:
 @validates_schema
 def validate_dates(self, data: dict, **kwargs) -> None:
     """Validate date relationships.
-    
+
     Args:
         data: Dictionary of validated fields.
-        
+
     Raises:
         ValidationError: If validation fails.
     """
@@ -443,10 +443,10 @@ def validate_dates(self, data: dict, **kwargs) -> None:
 @validates_schema
 def validate_conditional(self, data: dict, **kwargs) -> None:
     """Validate fields conditionally.
-    
+
     Args:
         data: Dictionary of validated fields.
-        
+
     Raises:
         ValidationError: If validation fails.
     """
@@ -467,10 +467,10 @@ from marshmallow import pre_load
 @pre_load
 def process_input(self, data: dict, **kwargs) -> dict:
     """Transform data before validation.
-    
+
     Args:
         data: Raw input data.
-        
+
     Returns:
         Transformed data.
     """
@@ -478,11 +478,11 @@ def process_input(self, data: dict, **kwargs) -> dict:
     for key, value in data.items():
         if isinstance(value, str):
             data[key] = value.strip()
-    
+
     # Convert email to lowercase
     if "email" in data:
         data["email"] = data["email"].lower()
-    
+
     return data
 ```
 
@@ -491,10 +491,10 @@ def process_input(self, data: dict, **kwargs) -> dict:
 @post_load
 def make_object(self, data: dict, **kwargs) -> dict:
     """Transform data after validation.
-    
+
     Args:
         data: Validated data.
-        
+
     Returns:
         Transformed data ready for use.
     """
@@ -502,7 +502,7 @@ def make_object(self, data: dict, **kwargs) -> dict:
     if "password" in data:
         from werkzeug.security import generate_password_hash
         data["password_hash"] = generate_password_hash(data.pop("password"))
-    
+
     return data
 ```
 
@@ -513,37 +513,37 @@ def make_object(self, data: dict, **kwargs) -> dict:
 @validates("password")
 def validate_password(self, value: str) -> None:
     """Validate password meets security requirements.
-    
+
     Requirements:
         - Minimum 8 characters
         - At least one uppercase letter
         - At least one lowercase letter
         - At least one digit
         - At least one special character
-    
+
     Args:
         value: Password to validate.
-        
+
     Raises:
         ValidationError: If password doesn't meet requirements.
     """
     errors = []
-    
+
     if len(value) < 8:
         errors.append("Password must be at least 8 characters long")
-    
+
     if not any(c.isupper() for c in value):
         errors.append("Password must contain at least one uppercase letter")
-    
+
     if not any(c.islower() for c in value):
         errors.append("Password must contain at least one lowercase letter")
-    
+
     if not any(c.isdigit() for c in value):
         errors.append("Password must contain at least one digit")
-    
+
     if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in value):
         errors.append("Password must contain at least one special character")
-    
+
     if errors:
         raise ValidationError(errors)
 ```
@@ -555,16 +555,16 @@ import re
 @validates("phone")
 def validate_phone(self, value: str) -> None:
     """Validate international phone number format.
-    
+
     Args:
         value: Phone number to validate.
-        
+
     Raises:
         ValidationError: If phone format is invalid.
     """
     # Remove common separators
     cleaned = re.sub(r'[\s\-\(\)]', '', value)
-    
+
     # Check international format
     if not re.match(r'^\+?1?\d{9,15}$', cleaned):
         raise ValidationError(
@@ -579,10 +579,10 @@ from datetime import time
 @validates_schema
 def validate_business_hours(self, data: dict, **kwargs) -> None:
     """Validate time is within business hours.
-    
+
     Args:
         data: Dictionary with time fields.
-        
+
     Raises:
         ValidationError: If outside business hours.
     """
@@ -590,7 +590,7 @@ def validate_business_hours(self, data: dict, **kwargs) -> None:
         appt_time = data["appointment_time"].time()
         start = time(9, 0)  # 9 AM
         end = time(17, 0)   # 5 PM
-        
+
         if not (start <= appt_time <= end):
             raise ValidationError(
                 "Appointments must be between 9 AM and 5 PM",
@@ -604,22 +604,22 @@ def validate_business_hours(self, data: dict, **kwargs) -> None:
 ```python
 class PaginationSchema(Schema):
     """Reusable pagination schema.
-    
+
     Can be extended or used directly for pagination parameters.
     """
-    
+
     page = fields.Int(
         missing=1,
         validate=validate.Range(min=1),
         error_messages={"invalid": "Page must be positive"}
     )
-    
+
     per_page = fields.Int(
         missing=20,
         validate=validate.Range(min=1, max=100),
         error_messages={"invalid": "Per page must be between 1 and 100"}
     )
-    
+
     class Meta:
         ordered = True
         unknown = "EXCLUDE"
@@ -629,16 +629,16 @@ class PaginationSchema(Schema):
 ```python
 class UserFilterSchema(PaginationSchema):
     """Schema for user filtering and pagination.
-    
+
     Extends pagination with filter-specific fields.
     """
-    
+
     is_active = fields.Bool()
     role = fields.Str(validate=validate.OneOf(["admin", "user", "guest"]))
     created_after = fields.DateTime()
     created_before = fields.DateTime()
     search = fields.Str(validate=validate.Length(max=100))
-    
+
     @validates_schema
     def validate_date_range(self, data: dict, **kwargs) -> None:
         """Validate created date range."""
@@ -680,10 +680,10 @@ from src.api.schemas.user import (
 
 class TestUserCreateSchema:
     """Tests for UserCreateSchema."""
-    
+
     def test_valid_data(self):
         """Test schema with valid data.
-        
+
         Given: Valid user creation data
         When: Schema loads data
         Then: Data is validated successfully
@@ -694,30 +694,30 @@ class TestUserCreateSchema:
             "username": "testuser",
             "password": "SecurePass123!"
         }
-        
+
         result = schema.load(data)
-        
+
         assert result["email"] == "test@example.com"
         assert result["username"] == "testuser"
-    
+
     def test_missing_required_field(self):
         """Test schema with missing required field.
-        
+
         Given: Data missing required email
         When: Schema loads data
         Then: ValidationError is raised
         """
         schema = UserCreateSchema()
         data = {"username": "testuser", "password": "SecurePass123!"}
-        
+
         with pytest.raises(ValidationError) as exc:
             schema.load(data)
-        
+
         assert "email" in exc.value.messages
-    
+
     def test_invalid_email_format(self):
         """Test schema with invalid email.
-        
+
         Given: Invalid email format
         When: Schema loads data
         Then: ValidationError is raised
@@ -728,15 +728,15 @@ class TestUserCreateSchema:
             "username": "testuser",
             "password": "SecurePass123!"
         }
-        
+
         with pytest.raises(ValidationError) as exc:
             schema.load(data)
-        
+
         assert "email" in exc.value.messages
-    
+
     def test_weak_password(self):
         """Test password strength validation.
-        
+
         Given: Weak password
         When: Schema loads data
         Then: ValidationError is raised
@@ -747,15 +747,15 @@ class TestUserCreateSchema:
             "username": "testuser",
             "password": "weak"
         }
-        
+
         with pytest.raises(ValidationError) as exc:
             schema.load(data)
-        
+
         assert "password" in exc.value.messages
-    
+
     def test_short_username(self):
         """Test username length validation.
-        
+
         Given: Username too short
         When: Schema loads data
         Then: ValidationError is raised
@@ -766,15 +766,15 @@ class TestUserCreateSchema:
             "username": "ab",
             "password": "SecurePass123!"
         }
-        
+
         with pytest.raises(ValidationError) as exc:
             schema.load(data)
-        
+
         assert "username" in exc.value.messages
-    
+
     def test_blacklisted_email_domain(self):
         """Test blacklisted email domain.
-        
+
         Given: Email from blacklisted domain
         When: Schema loads data
         Then: ValidationError is raised
@@ -785,43 +785,43 @@ class TestUserCreateSchema:
             "username": "testuser",
             "password": "SecurePass123!"
         }
-        
+
         with pytest.raises(ValidationError) as exc:
             schema.load(data)
-        
+
         assert "email" in exc.value.messages
 
 
 class TestUserUpdateSchema:
     """Tests for UserUpdateSchema."""
-    
+
     def test_partial_update(self):
         """Test partial update with some fields.
-        
+
         Given: Only username to update
         When: Schema loads data with partial=True
         Then: Data is validated successfully
         """
         schema = UserUpdateSchema()
         data = {"username": "newusername"}
-        
+
         result = schema.load(data, partial=True)
-        
+
         assert result["username"] == "newusername"
         assert "email" not in result
-    
+
     def test_empty_update(self):
         """Test update with no fields.
-        
+
         Given: Empty update data
         When: Schema loads data
         Then: Returns empty dict (valid)
         """
         schema = UserUpdateSchema()
         data = {}
-        
+
         result = schema.load(data, partial=True)
-        
+
         assert result == {}
 ```
 

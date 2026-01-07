@@ -140,13 +140,13 @@ Complete vertical slice including model (first endpoint), schema, resource, auth
 class ${Resource}(UUIDMixin, TimestampMixin, db.Model):
     """${Resource} database model."""
     __tablename__ = '${resource_plural}'
-    
+
     # Fields from spec
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     # Indexes
     __table_args__ = (
         Index('idx_${resource_plural}_company_id', 'company_id'),
@@ -169,7 +169,7 @@ class ${Resource}Schema(SQLAlchemyAutoSchema):
 \`\`\`python
 class ${Resource}ListResource(Resource):
     """Resource for ${resource} collection operations."""
-    
+
     @require_jwt_auth
     @access_required(Operation.LIST, "${resource_plural}")
     @limiter.limit("100 per minute")
@@ -261,7 +261,7 @@ class ${Resource}CreateSchema(SQLAlchemyAutoSchema):
         model = ${Resource}
         load_instance = True
         exclude = ('id', 'created_at', 'updated_at')
-    
+
     # Custom validation
     @validates('name')
     def validate_name(self, value):
@@ -351,7 +351,7 @@ Creates ${Resource}Resource class for item operations.
 \`\`\`python
 class ${Resource}Resource(Resource):
     """Resource for single ${resource} operations."""
-    
+
     @require_jwt_auth
     @access_required(Operation.READ, "${resource_plural}")
     @limiter.limit("100 per minute")

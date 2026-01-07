@@ -171,36 +171,36 @@ from flask_restful import Resource
 
 class UserListResource(Resource):
     """REST resource for user collection operations.
-    
+
     This resource handles /users endpoint and implements
     list and create operations as per OpenAPI specification.
-    
+
     Attributes:
         user_service: User management service.
         schema: Marshmallow schema for validation.
     """
-    
+
     def get(self) -> tuple[dict, int]:
         """Retrieve paginated list of users.
-        
+
         Returns:
             A tuple containing the response dictionary and HTTP status code.
-            
+
         Raises:
             ValidationError: If pagination parameters are invalid.
-            
+
         Examples:
             >>> resource.get()
             ({'users': [...], 'total': 100}, 200)
         """
         pass
-    
+
     def post(self) -> tuple[dict, int]:
         """Create a new user.
-        
+
         Returns:
             A tuple containing the created user and HTTP 201 status.
-            
+
         Raises:
             ValidationError: If request data is invalid.
             ConflictError: If user already exists.
@@ -210,57 +210,57 @@ class UserListResource(Resource):
 
 class UserResource(Resource):
     """REST resource for individual user operations.
-    
+
     This resource handles /users/<id> endpoint and implements
     retrieve, update and delete operations.
-    
+
     Attributes:
         user_service: User management service.
         schema: Marshmallow schema for validation.
     """
-    
+
     def get(self, user_id: int) -> tuple[dict, int]:
         """Retrieve a specific user by ID.
-        
+
         Args:
             user_id: Unique identifier of the user.
-        
+
         Returns:
             A tuple containing the user dictionary and HTTP status code.
-            
+
         Raises:
             NotFoundError: If the user does not exist.
-            
+
         Examples:
             >>> resource.get(user_id=1)
             ({'id': 1, 'name': 'John'}, 200)
         """
         pass
-    
+
     def put(self, user_id: int) -> tuple[dict, int]:
         """Update a user completely.
-        
+
         Args:
             user_id: Unique identifier of the user.
-            
+
         Returns:
             A tuple containing the updated user and HTTP 200 status.
-            
+
         Raises:
             NotFoundError: If the user does not exist.
             ValidationError: If request data is invalid.
         """
         pass
-    
+
     def delete(self, user_id: int) -> tuple[dict, int]:
         """Delete a specific user.
-        
+
         Args:
             user_id: Unique identifier of the user.
-            
+
         Returns:
             A tuple containing empty dict and HTTP 204 status.
-            
+
         Raises:
             NotFoundError: If the user does not exist.
         """
@@ -326,21 +326,21 @@ from prometheus_flask_exporter import PrometheusMetrics
 
 def register_routes(app: Flask) -> None:
     """Register all application routes and monitoring endpoints.
-    
+
     Args:
         app: Flask application instance.
     """
     api = Api(app)
-    
+
     # Health and monitoring endpoints (required for every API)
     app.add_url_rule('/health', 'health', health_check, methods=['GET'])
     app.add_url_rule('/ready', 'ready', readiness_check, methods=['GET'])
     app.add_url_rule('/version', 'version', version_info, methods=['GET'])
-    
+
     # Prometheus metrics endpoint
     metrics = PrometheusMetrics(app)
     metrics.info('app_info', 'Application info', version='1.0.0')
-    
+
     # API Resources
     api.add_resource(UserListResource, '/users')
     api.add_resource(UserResource, '/users/<int:user_id>')
@@ -374,10 +374,10 @@ from .. import db
 
 def health_check() -> Tuple[Response, int]:
     """Basic health check endpoint.
-    
+
     Returns simple alive status without checking dependencies.
     Used as Kubernetes liveness probe.
-    
+
     Returns:
         JSON response with status and HTTP 200.
     """
@@ -386,19 +386,19 @@ def health_check() -> Tuple[Response, int]:
 
 def readiness_check() -> Tuple[Response, int]:
     """Readiness check with dependency verification.
-    
+
     Checks database connectivity and other critical dependencies.
     Used as Kubernetes readiness probe.
-    
+
     Returns:
         JSON response with status and HTTP 200 if ready, 503 otherwise.
     """
     try:
         # Check database connectivity
         db.session.execute(text("SELECT 1"))
-        
+
         # Add other dependency checks here (Redis, external APIs, etc.)
-        
+
         return jsonify({
             "status": "ready",
             "checks": {
@@ -414,14 +414,14 @@ def readiness_check() -> Tuple[Response, int]:
 
 def version_info() -> Tuple[Response, int]:
     """Version information endpoint.
-    
+
     Returns application version, commit hash, and build info.
-    
+
     Returns:
         JSON response with version details and HTTP 200.
     """
     import os
-    
+
     return jsonify({
         "version": os.getenv("APP_VERSION", "dev"),
         "commit": os.getenv("GIT_COMMIT", "unknown"),
@@ -458,23 +458,23 @@ from typing import Final
 
 class Config:
     """Base application configuration.
-    
+
     Attributes:
         SECRET_KEY: Secret key for sessions (from environment).
         SQLALCHEMY_DATABASE_URI: Database connection URI.
         JWT_SECRET_KEY: Secret key for JWT encryption.
         JWT_ACCESS_TOKEN_EXPIRES: Token validity duration.
     """
-    
+
     SECRET_KEY: Final[str] = os.environ.get("SECRET_KEY", "dev-key-change-in-prod")
     SQLALCHEMY_DATABASE_URI: Final[str] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
     SQLALCHEMY_TRACK_MODIFICATIONS: Final[bool] = False
-    
+
     # JWT Configuration
     JWT_SECRET_KEY: Final[str] = os.environ["JWT_SECRET_KEY"]
     JWT_ACCESS_TOKEN_EXPIRES: Final[timedelta] = timedelta(hours=1)
     JWT_ALGORITHM: Final[str] = "HS256"
-    
+
     # Security Headers
     SECURITY_HEADERS: Final[dict[str, str]] = {
         "X-Content-Type-Options": "nosniff",
@@ -506,7 +506,7 @@ from pythonjsonlogger import jsonlogger
 
 def setup_logging(app: Flask) -> None:
     """Configure structured logging for the application.
-    
+
     Args:
         app: Flask instance to configure.
     """
@@ -517,12 +517,12 @@ def setup_logging(app: Flask) -> None:
     handler.setFormatter(formatter)
     app.logger.addHandler(handler)
     app.logger.setLevel(logging.INFO)
-    
+
     @app.before_request
     def add_correlation_id() -> None:
         """Add a unique correlation ID to each request."""
         g.correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
-    
+
     @app.after_request
     def log_request(response: Any) -> Any:
         """Log each request with its context."""
@@ -557,32 +557,32 @@ from functools import wraps
 
 def idempotent(f):
     """Decorator to make an operation idempotent.
-    
+
     Uses the Idempotency-Key header to detect duplicates.
-    
+
     Args:
         f: Function to decorate.
-        
+
     Returns:
         Decorated function with idempotency handling.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         idempotency_key: Optional[str] = request.headers.get("Idempotency-Key")
-        
+
         if idempotency_key:
             # Check if this key has already been processed
             cached_response = check_idempotency_cache(idempotency_key)
             if cached_response:
                 return cached_response
-        
+
         response = f(*args, **kwargs)
-        
+
         if idempotency_key and response[1] in (200, 201):
             store_idempotency_response(idempotency_key, response)
-        
+
         return response
-    
+
     return decorated_function
 ```
 
@@ -613,10 +613,10 @@ import yaml
 
 def create_app() -> FlaskApp:
     """Create Flask application with OpenAPI validation.
-    
+
     Returns:
         Configured and validated application instance.
-        
+
     Raises:
         OpenAPIValidationError: If spec is not valid.
     """
@@ -624,11 +624,11 @@ def create_app() -> FlaskApp:
     with open("openapi/spec.yaml") as f:
         spec = yaml.safe_load(f)
         validate_spec(spec)
-    
+
     # Create app with connexion for automatic validation
     app = FlaskApp(__name__, specification_dir="openapi/")
     app.add_api("spec.yaml", strict_validation=True, validate_responses=True)
-    
+
     return app
 ```
 
@@ -651,10 +651,10 @@ from flask.testing import FlaskClient
 @pytest.fixture
 def client(app: Flask) -> FlaskClient:
     """Fixture providing a test client.
-    
+
     Args:
         app: Flask test instance.
-        
+
     Yields:
         Configured test client.
     """
@@ -664,95 +664,95 @@ def client(app: Flask) -> FlaskClient:
 
 class TestUserListResource:
     """Tests for UserListResource."""
-    
+
     def test_get_users_success(self, client: FlaskClient) -> None:
         """Test retrieving user list.
-        
+
         Given: Users exist in database
         When: GET /users is called
         Then: Status is 200 and data is correct
         """
         response = client.get("/users")
-        
+
         assert response.status_code == 200
         assert "users" in response.json
         assert isinstance(response.json["users"], list)
-    
+
     def test_create_user_success(self, client: FlaskClient) -> None:
         """Test creating a new user.
-        
+
         Given: Valid user data
         When: POST /users is called
         Then: Status is 201 and user is created
         """
         data = {"email": "test@example.com", "name": "Test User"}
         response = client.post("/users", json=data)
-        
+
         assert response.status_code == 201
         assert response.json["email"] == data["email"]
-    
+
     def test_create_user_validation_error(self, client: FlaskClient) -> None:
         """Test creation with invalid data.
-        
+
         Given: Invalid user data
         When: POST /users is called
         Then: Status is 400 with error message
         """
         response = client.post("/users", json={"email": "invalid"})
-        
+
         assert response.status_code == 400
         assert "errors" in response.json
 
 
 class TestUserResource:
     """Tests for UserResource."""
-    
+
     def test_get_user_success(self, client: FlaskClient) -> None:
         """Test retrieving an existing user.
-        
+
         Given: A user exists in database
         When: GET /users/1 is called
         Then: Status is 200 and data is correct
         """
         response = client.get("/users/1")
-        
+
         assert response.status_code == 200
         assert response.json["id"] == 1
         assert "email" in response.json
-    
+
     def test_get_user_not_found(self, client: FlaskClient) -> None:
         """Test retrieving non-existent user.
-        
+
         Given: User does not exist
         When: GET /users/9999 is called
         Then: Status is 404
         """
         response = client.get("/users/9999")
-        
+
         assert response.status_code == 404
-    
+
     def test_update_user_success(self, client: FlaskClient) -> None:
         """Test updating a user.
-        
+
         Given: Valid update data and existing user
         When: PUT /users/1 is called
         Then: Status is 200 and user is updated
         """
         data = {"email": "updated@example.com", "name": "Updated Name"}
         response = client.put("/users/1", json=data)
-        
+
         assert response.status_code == 200
         assert response.json["email"] == data["email"]
-    
+
     def test_delete_user_success(self, client: FlaskClient) -> None:
         """Test deleting a user.
-        
+
         Given: User exists in database
         When: DELETE /users/1 is called
         Then: Status is 204
         """
         response = client.delete("/users/1")
-        
+
         assert response.status_code == 204
 ```
 

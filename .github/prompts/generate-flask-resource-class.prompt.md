@@ -75,25 +75,25 @@ logger = logging.getLogger(__name__)
 
 class ${entityName.capitalize()}ListResource(Resource):
     """Resource for ${entityName} collection operations.
-    
+
     Handles /v0/${entityNamePlural} endpoint for listing and creating ${entityNamePlural}.
     Implements pagination, filtering, and search capabilities.
     """
-    
+
     def __init__(self) -> None:
         """Initialize resource with schemas.
-        
+
         Initializes Marshmallow schemas for validation and serialization.
         """
         self.schema = ${entityName.capitalize()}Schema()
         self.create_schema = ${entityName.capitalize()}CreateSchema()
-    
+
     @require_jwt_auth
     @access_required(Operation.LIST)
     @limiter.limit("100 per minute")
     def get(self) -> tuple[dict, int]:
         """List all ${entityNamePlural} with pagination and filtering.
-        
+
         Query Parameters:
             page (int): Page number (default: 1, min: 1)
             per_page (int): Items per page (default: 20, max: 100)
@@ -101,7 +101,7 @@ class ${entityName.capitalize()}ListResource(Resource):
             is_active (bool): Filter by active status
             sort_by (str): Field to sort by (default: created_at)
             sort_order (str): Sort direction - asc or desc (default: desc)
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
             Response contains:
@@ -110,14 +110,14 @@ class ${entityName.capitalize()}ListResource(Resource):
                 - per_page: Items per page
                 - total: Total number of items
                 - total_pages: Total number of pages
-        
+
         Responses:
             200: Success with paginated results
             400: Invalid query parameters
             401: Unauthorized (no valid JWT)
             403: Forbidden (insufficient permissions)
             500: Internal server error
-        
+
         Examples:
             GET /v0/${entityNamePlural}?page=1&per_page=20
             GET /v0/${entityNamePlural}?search=test&is_active=true
@@ -130,33 +130,33 @@ class ${entityName.capitalize()}ListResource(Resource):
             is_active = request.args.get("is_active", type=bool)
             sort_by = request.args.get("sort_by", "created_at", type=str)
             sort_order = request.args.get("sort_order", "desc", type=str)
-            
+
             # Build query
             query = ${entityName.capitalize()}.query
-            
+
             # Apply filters
             if search:
                 query = query.filter(
                     ${entityName.capitalize()}.name.ilike(f"%{search}%")
                 )
-            
+
             if is_active is not None:
                 query = query.filter(${entityName.capitalize()}.is_active == is_active)
-            
+
             # Apply sorting
             sort_column = getattr(${entityName.capitalize()}, sort_by, ${entityName.capitalize()}.created_at)
             if sort_order.lower() == "asc":
                 query = query.order_by(sort_column.asc())
             else:
                 query = query.order_by(sort_column.desc())
-            
+
             # Paginate
             pagination = query.paginate(
                 page=page,
                 per_page=per_page,
                 error_out=False
             )
-            
+
             logger.info(
                 f"Listed ${entityNamePlural}",
                 extra={
@@ -167,14 +167,14 @@ class ${entityName.capitalize()}ListResource(Resource):
                     "total": pagination.total
                 }
             )
-            
+
             return paginated_response(
                 data=self.schema.dump(pagination.items, many=True),
                 page=page,
                 per_page=per_page,
                 total=pagination.total
             )
-            
+
         except Exception as e:
             logger.error(
                 f"Failed to list ${entityNamePlural}",
@@ -189,21 +189,21 @@ class ${entityName.capitalize()}ListResource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.CREATE)
     @limiter.limit("20 per minute")
     def post(self) -> tuple[dict, int]:
         """Create a new ${entityName}.
-        
+
         Request Body:
             JSON object with ${entityName} data validated by CreateSchema.
             See ${entityName.capitalize()}CreateSchema for required fields.
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
             Response contains created ${entityName} data.
-        
+
         Responses:
             201: ${entityName.capitalize()} created successfully
             400: Invalid request data (validation errors)
@@ -211,7 +211,7 @@ class ${entityName.capitalize()}ListResource(Resource):
             403: Forbidden (insufficient permissions)
             409: Conflict (duplicate resource)
             500: Internal server error
-        
+
         Examples:
             POST /v0/${entityNamePlural}
             Body: {"name": "Test ${entityName.capitalize()}", "description": "Test description"}
@@ -224,14 +224,14 @@ class ${entityName.capitalize()}ListResource(Resource):
                     "No input data provided",
                     status_code=400
                 )
-            
+
             data = self.create_schema.load(json_data)
-            
+
             # Create entity
             ${entityName} = ${entityName.capitalize()}(**data)
             db.session.add(${entityName})
             db.session.commit()
-            
+
             logger.info(
                 f"${entityName.capitalize()} created",
                 extra={
@@ -240,13 +240,13 @@ class ${entityName.capitalize()}ListResource(Resource):
                     "${entityName}_id": str(${entityName}.id)
                 }
             )
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} created successfully",
                 status_code=201
             )
-            
+
         except ValidationError as e:
             logger.warning(
                 f"${entityName.capitalize()} creation validation failed",
@@ -293,30 +293,30 @@ class ${entityName.capitalize()}ListResource(Resource):
 
 class ${entityName.capitalize()}Resource(Resource):
     """Resource for individual ${entityName} operations.
-    
+
     Handles /v0/${entityNamePlural}/<${entityName}_id> endpoint for operations
     on a specific ${entityName} instance.
     """
-    
+
     def __init__(self) -> None:
         """Initialize resource with schemas."""
         self.schema = ${entityName.capitalize()}Schema()
         self.update_schema = ${entityName.capitalize()}UpdateSchema()
         self.replace_schema = ${entityName.capitalize()}ReplaceSchema()
-    
+
     @require_jwt_auth
     @access_required(Operation.READ)
     @limiter.limit("200 per minute")
     def get(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Retrieve a specific ${entityName} by ID.
-        
+
         Path Parameters:
             ${entityName}_id (str): UUID of the ${entityName}
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
             Response contains ${entityName} data.
-        
+
         Responses:
             200: ${entityName.capitalize()} found and returned
             401: Unauthorized
@@ -326,12 +326,12 @@ class ${entityName.capitalize()}Resource(Resource):
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} with id {${entityName}_id} not found")
-            
+
             return success_response(data=self.schema.dump(${entityName}))
-            
+
         except NotFoundError as e:
             logger.info(
                 f"${entityName.capitalize()} not found",
@@ -356,22 +356,22 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.UPDATE)
     @limiter.limit("50 per minute")
     def patch(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Partially update a ${entityName}.
-        
+
         Path Parameters:
             ${entityName}_id (str): UUID of the ${entityName}
-        
+
         Request Body:
             JSON object with fields to update (all optional).
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-        
+
         Responses:
             200: ${entityName.capitalize()} updated successfully
             400: Invalid request data
@@ -382,10 +382,10 @@ class ${entityName.capitalize()}Resource(Resource):
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} with id {${entityName}_id} not found")
-            
+
             # Validate partial data
             json_data = request.get_json()
             if not json_data:
@@ -393,15 +393,15 @@ class ${entityName.capitalize()}Resource(Resource):
                     "No input data provided",
                     status_code=400
                 )
-            
+
             data = self.update_schema.load(json_data, partial=True)
-            
+
             # Update fields
             for key, value in data.items():
                 setattr(${entityName}, key, value)
-            
+
             db.session.commit()
-            
+
             logger.info(
                 f"${entityName.capitalize()} updated",
                 extra={
@@ -411,12 +411,12 @@ class ${entityName.capitalize()}Resource(Resource):
                     "updated_fields": list(data.keys())
                 }
             )
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} updated successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -441,22 +441,22 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.UPDATE)
     @limiter.limit("50 per minute")
     def put(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Completely replace a ${entityName}.
-        
+
         Path Parameters:
             ${entityName}_id (str): UUID of the ${entityName}
-        
+
         Request Body:
             JSON object with all required fields.
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-        
+
         Responses:
             200: ${entityName.capitalize()} replaced successfully
             400: Invalid request data
@@ -467,10 +467,10 @@ class ${entityName.capitalize()}Resource(Resource):
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} with id {${entityName}_id} not found")
-            
+
             # Validate complete data
             json_data = request.get_json()
             if not json_data:
@@ -478,15 +478,15 @@ class ${entityName.capitalize()}Resource(Resource):
                     "No input data provided",
                     status_code=400
                 )
-            
+
             data = self.replace_schema.load(json_data)
-            
+
             # Replace all fields
             for key, value in data.items():
                 setattr(${entityName}, key, value)
-            
+
             db.session.commit()
-            
+
             logger.info(
                 f"${entityName.capitalize()} replaced",
                 extra={
@@ -495,12 +495,12 @@ class ${entityName.capitalize()}Resource(Resource):
                     "${entityName}_id": ${entityName}_id
                 }
             )
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} replaced successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -525,19 +525,19 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.DELETE)
     @limiter.limit("20 per minute")
     def delete(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Delete a specific ${entityName}.
-        
+
         Path Parameters:
             ${entityName}_id (str): UUID of the ${entityName}
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-        
+
         Responses:
             204: ${entityName.capitalize()} deleted successfully
             401: Unauthorized
@@ -547,13 +547,13 @@ class ${entityName.capitalize()}Resource(Resource):
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} with id {${entityName}_id} not found")
-            
+
             db.session.delete(${entityName})
             db.session.commit()
-            
+
             logger.info(
                 f"${entityName.capitalize()} deleted",
                 extra={
@@ -562,12 +562,12 @@ class ${entityName.capitalize()}Resource(Resource):
                     "${entityName}_id": ${entityName}_id
                 }
             )
-            
+
             return success_response(
                 message="${entityName.capitalize()} deleted successfully",
                 status_code=204
             )
-            
+
         except NotFoundError as e:
             return error_response(str(e), status_code=404)
         except Exception as e:

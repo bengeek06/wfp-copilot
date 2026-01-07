@@ -85,7 +85,7 @@ components:
         is_active: true
         created_at: "2024-01-07T10:00:00Z"
         updated_at: "2024-01-07T10:00:00Z"
-    
+
     ${entityName.capitalize()}Create:
       type: object
       description: Schema for creating a new ${entityName}
@@ -110,7 +110,7 @@ components:
         name: "New ${entityName.capitalize()}"
         description: "Description text"
         is_active: true
-    
+
     ${entityName.capitalize()}Update:
       type: object
       description: Schema for partially updating a ${entityName}
@@ -130,7 +130,7 @@ components:
           description: Active status flag
       example:
         name: "Updated Name"
-    
+
     ${entityName.capitalize()}Replace:
       type: object
       description: Schema for completely replacing a ${entityName}
@@ -155,7 +155,7 @@ components:
         name: "Replaced Name"
         description: "New description"
         is_active: false
-    
+
     ${entityName.capitalize()}List:
       type: object
       description: Paginated list of ${entityNamePlural}
@@ -276,7 +276,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     post:
       summary: Create ${entityName}
       description: Create a new ${entityName}
@@ -314,7 +314,7 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
+
   /${apiVersion}/${entityNamePlural}/{${entityName}Id}:
     parameters:
       - name: ${entityName}Id
@@ -324,7 +324,7 @@ paths:
         schema:
           type: string
           format: uuid
-    
+
     get:
       summary: Get ${entityName}
       description: Retrieve a specific ${entityName} by ID
@@ -351,7 +351,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     patch:
       summary: Update ${entityName}
       description: Partially update a ${entityName}
@@ -389,7 +389,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     put:
       summary: Replace ${entityName}
       description: Completely replace a ${entityName}
@@ -427,7 +427,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     delete:
       summary: Delete ${entityName}
       description: Delete a specific ${entityName}
@@ -470,42 +470,42 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    
+
     Unauthorized:
       description: Authentication required or invalid token
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    
+
     Forbidden:
       description: Insufficient permissions
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    
+
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    
+
     Conflict:
       description: Resource already exists or constraint violation
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    
+
     InternalServerError:
       description: Internal server error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-  
+
   schemas:
     Error:
       type: object

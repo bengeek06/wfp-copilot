@@ -38,29 +38,29 @@ from .. import db
 
 class UserListResource(Resource):
     """Resource for user collection operations.
-    
+
     Handles endpoints for listing users and creating new users.
     Corresponds to /users endpoint.
     """
-    
+
     def __init__(self) -> None:
         """Initialize UserListResource with dependencies."""
         self.user_service = UserService(db.session)
         self.schema = UserSchema()
         self.create_schema = UserCreateSchema()
-    
+
     @rate_limit(max_requests=100, window=60)
     def get(self) -> tuple[dict, int]:
         """Retrieve paginated list of users.
-        
+
         Query Parameters:
             page (int): Page number (default: 1)
             per_page (int): Items per page (default: 20, max: 100)
             is_active (bool): Filter by activation status
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-            
+
         Responses:
             200: Success with user list
             400: Invalid query parameters
@@ -69,21 +69,21 @@ class UserListResource(Resource):
         page = request.args.get("page", 1, type=int)
         per_page = min(request.args.get("per_page", 20, type=int), 100)
         is_active = request.args.get("is_active", type=lambda v: v.lower() == "true")
-        
+
         # Validate pagination
         if page < 1 or per_page < 1:
             return error_response(
                 "Invalid pagination parameters",
                 status_code=400
             )
-        
+
         try:
             users, total = self.user_service.list(
                 page=page,
                 per_page=per_page,
                 is_active=is_active
             )
-            
+
             return paginated_response(
                 data=self.schema.dump(users, many=True),
                 page=page,
@@ -96,18 +96,18 @@ class UserListResource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_auth
     @rate_limit(max_requests=10, window=60)
     def post(self) -> tuple[dict, int]:
         """Create a new user.
-        
+
         Request Body:
             JSON object with user data (validated by UserCreateSchema)
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-            
+
         Responses:
             201: User created successfully
             400: Invalid request data
@@ -116,16 +116,16 @@ class UserListResource(Resource):
         try:
             # Validate request data
             data = self.create_schema.load(request.get_json())
-            
+
             # Create user
             user = self.user_service.create(data)
-            
+
             return success_response(
                 data=self.schema.dump(user),
                 message="User created successfully",
                 status_code=201
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -147,38 +147,38 @@ class UserListResource(Resource):
 
 class UserResource(Resource):
     """Resource for individual user operations.
-    
+
     Handles endpoints for retrieving, updating and deleting
     a specific user. Corresponds to /users/<user_id> endpoint.
     """
-    
+
     def __init__(self) -> None:
         """Initialize UserResource with dependencies."""
         self.user_service = UserService(db.session)
         self.schema = UserSchema()
         self.update_schema = UserUpdateSchema()
-    
+
     @rate_limit(max_requests=100, window=60)
     def get(self, user_id: int) -> tuple[dict, int]:
         """Retrieve a specific user by ID.
-        
+
         Path Parameters:
             user_id (int): Unique user identifier
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-            
+
         Responses:
             200: User found and returned
             404: User not found
         """
         try:
             user = self.user_service.get_by_id(user_id)
-            
+
             return success_response(
                 data=self.schema.dump(user)
             )
-            
+
         except NotFoundError as e:
             return error_response(
                 str(e),
@@ -190,21 +190,21 @@ class UserResource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_auth
     @rate_limit(max_requests=20, window=60)
     def put(self, user_id: int) -> tuple[dict, int]:
         """Update a user completely.
-        
+
         Path Parameters:
             user_id (int): Unique user identifier
-            
+
         Request Body:
             JSON object with complete user data
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-            
+
         Responses:
             200: User updated successfully
             400: Invalid request data
@@ -214,15 +214,15 @@ class UserResource(Resource):
         try:
             # Validate request data
             data = self.update_schema.load(request.get_json())
-            
+
             # Update user
             user = self.user_service.update(user_id, data)
-            
+
             return success_response(
                 data=self.schema.dump(user),
                 message="User updated successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -245,21 +245,21 @@ class UserResource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_auth
     @rate_limit(max_requests=20, window=60)
     def patch(self, user_id: int) -> tuple[dict, int]:
         """Partially update a user.
-        
+
         Path Parameters:
             user_id (int): Unique user identifier
-            
+
         Request Body:
             JSON object with fields to update (partial)
-        
+
         Returns:
             Tuple of (response dict, HTTP status code).
-            
+
         Responses:
             200: User updated successfully
             400: Invalid request data
@@ -268,15 +268,15 @@ class UserResource(Resource):
         try:
             # Validate partial data
             data = self.update_schema.load(request.get_json(), partial=True)
-            
+
             # Update user
             user = self.user_service.update(user_id, data)
-            
+
             return success_response(
                 data=self.schema.dump(user),
                 message="User updated successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -294,27 +294,27 @@ class UserResource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_auth
     @rate_limit(max_requests=10, window=60)
     def delete(self, user_id: int) -> tuple[dict, int]:
         """Delete a user.
-        
+
         Path Parameters:
             user_id (int): Unique user identifier
-        
+
         Returns:
             Tuple of (empty dict, HTTP status code 204).
-            
+
         Responses:
             204: User deleted successfully
             404: User not found
         """
         try:
             self.user_service.delete(user_id)
-            
+
             return {}, 204
-            
+
         except NotFoundError as e:
             return error_response(
                 str(e),
@@ -396,16 +396,16 @@ def get(self) -> tuple[dict, int]:
     # With defaults and type conversion
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 20, type=int)
-    
+
     # Boolean parameters
     is_active = request.args.get(
         "is_active",
         type=lambda v: v.lower() == "true"
     )
-    
+
     # List parameters
     tags = request.args.getlist("tags")
-    
+
     # Validate
     if page < 1:
         return error_response("Invalid page number", status_code=400)
@@ -418,15 +418,15 @@ def post(self) -> tuple[dict, int]:
     try:
         # Get JSON body
         json_data = request.get_json()
-        
+
         # Validate with schema
         data = self.create_schema.load(json_data)
-        
+
         # Process data
         result = self.service.create(data)
-        
+
         return success_response(data=self.schema.dump(result), status_code=201)
-    
+
     except ValidationError as e:
         return error_response(
             "Validation failed",
@@ -455,7 +455,7 @@ def post(self) -> tuple[dict, int]:
         data = self.create_schema.load(request.get_json())
         result = self.service.create(data)
         return success_response(data=self.schema.dump(result), status_code=201)
-        
+
     except ValidationError as e:
         # Schema validation errors
         return error_response(
@@ -528,10 +528,10 @@ def post(self) -> tuple[dict, int]:
             "endpoint": "POST /users"
         }
     )
-    
+
     try:
         result = self.service.create(data)
-        
+
         logger.info(
             "User created",
             extra={
@@ -539,7 +539,7 @@ def post(self) -> tuple[dict, int]:
                 "user_id": result.id
             }
         )
-        
+
         return success_response(data=self.schema.dump(result), status_code=201)
     except Exception as e:
         logger.error(
@@ -559,18 +559,18 @@ Resources should be self-documenting through docstrings:
 ```python
 def get(self, user_id: int) -> tuple[dict, int]:
     """Retrieve a specific user by ID.
-    
+
     Path Parameters:
         user_id (int): Unique user identifier
-    
+
     Returns:
         Tuple of (response dict, HTTP status code).
-        
+
     Responses:
         200: User found and returned
         404: User not found
         500: Internal server error
-        
+
     Example Response:
         {
             "data": {
@@ -610,36 +610,36 @@ from flask.testing import FlaskClient
 
 class TestUserListResource:
     """Tests for UserListResource."""
-    
+
     def test_get_users_success(self, client: FlaskClient):
         """Test retrieving user list.
-        
+
         Given: Users exist in database
         When: GET /users is called
         Then: Returns 200 with user list
         """
         response = client.get("/users")
-        
+
         assert response.status_code == 200
         assert "data" in response.json
         assert isinstance(response.json["data"], list)
-    
+
     def test_get_users_pagination(self, client: FlaskClient):
         """Test user list pagination.
-        
+
         Given: Query parameters for pagination
         When: GET /users?page=2&per_page=5 is called
         Then: Returns paginated results
         """
         response = client.get("/users?page=2&per_page=5")
-        
+
         assert response.status_code == 200
         assert response.json["page"] == 2
         assert response.json["per_page"] == 5
-    
+
     def test_create_user_success(self, client: FlaskClient, auth_headers):
         """Test creating a new user.
-        
+
         Given: Valid user data and authentication
         When: POST /users is called
         Then: Returns 201 with created user
@@ -649,69 +649,69 @@ class TestUserListResource:
             "username": "newuser",
             "password": "SecurePass123!"
         }
-        
+
         response = client.post("/users", json=data, headers=auth_headers)
-        
+
         assert response.status_code == 201
         assert response.json["data"]["email"] == data["email"]
-    
+
     def test_create_user_validation_error(self, client: FlaskClient, auth_headers):
         """Test creating user with invalid data.
-        
+
         Given: Invalid user data
         When: POST /users is called
         Then: Returns 400 with validation errors
         """
         data = {"email": "invalid-email"}
-        
+
         response = client.post("/users", json=data, headers=auth_headers)
-        
+
         assert response.status_code == 400
         assert "errors" in response.json
-    
+
     def test_create_user_unauthorized(self, client: FlaskClient):
         """Test creating user without authentication.
-        
+
         Given: No authentication token
         When: POST /users is called
         Then: Returns 401 unauthorized
         """
         data = {"email": "test@example.com", "username": "test"}
-        
+
         response = client.post("/users", json=data)
-        
+
         assert response.status_code == 401
 
 
 class TestUserResource:
     """Tests for UserResource."""
-    
+
     def test_get_user_success(self, client: FlaskClient):
         """Test retrieving existing user."""
         response = client.get("/users/1")
-        
+
         assert response.status_code == 200
         assert response.json["data"]["id"] == 1
-    
+
     def test_get_user_not_found(self, client: FlaskClient):
         """Test retrieving non-existent user."""
         response = client.get("/users/99999")
-        
+
         assert response.status_code == 404
-    
+
     def test_update_user_success(self, client: FlaskClient, auth_headers):
         """Test updating a user."""
         data = {"username": "updated_name"}
-        
+
         response = client.put("/users/1", json=data, headers=auth_headers)
-        
+
         assert response.status_code == 200
         assert response.json["data"]["username"] == "updated_name"
-    
+
     def test_delete_user_success(self, client: FlaskClient, auth_headers):
         """Test deleting a user."""
         response = client.delete("/users/1", headers=auth_headers)
-        
+
         assert response.status_code == 204
 ```
 
@@ -731,19 +731,19 @@ def success_response(
     status_code: int = 200
 ) -> tuple[dict, int]:
     """Create a success response.
-    
+
     Args:
         data: Response data.
         message: Optional success message.
         status_code: HTTP status code.
-        
+
     Returns:
         Tuple of (response dict, status code).
     """
     response = {"data": data}
     if message:
         response["message"] = message
-    
+
     return response, status_code
 
 
@@ -753,19 +753,19 @@ def error_response(
     errors: Optional[dict] = None
 ) -> tuple[dict, int]:
     """Create an error response.
-    
+
     Args:
         message: Error message.
         status_code: HTTP status code.
         errors: Optional detailed errors.
-        
+
     Returns:
         Tuple of (response dict, status code).
     """
     response = {"message": message}
     if errors:
         response["errors"] = errors
-    
+
     return response, status_code
 
 
@@ -776,13 +776,13 @@ def paginated_response(
     total: int
 ) -> tuple[dict, int]:
     """Create a paginated response.
-    
+
     Args:
         data: List of items.
         page: Current page number.
         per_page: Items per page.
         total: Total number of items.
-        
+
     Returns:
         Tuple of (response dict, 200).
     """

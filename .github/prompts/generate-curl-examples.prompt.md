@@ -622,9 +622,9 @@ esac
 login() {
   local email=${1:-"user@example.com"}
   local password=${2:-"password"}
-  
+
   echo "Logging in as $email..."
-  
+
   curl -X POST "$IDENTITY_BASE_URL/auth/login" \
     -H 'Content-Type: application/json' \
     -d "{
@@ -633,7 +633,7 @@ login() {
     }" \
     -c ~/.api-cookies.txt \
     -s | jq '.'
-  
+
   export ACCESS_TOKEN=$(grep access_token ~/.api-cookies.txt | awk '{print $7}')
   echo "Logged in successfully. Token saved."
 }
@@ -648,7 +648,7 @@ api_get() {
 api_post() {
   local endpoint=$1
   local data=$2
-  
+
   curl -X POST "$API_BASE_URL/$endpoint" \
     -H "Cookie: access_token=$ACCESS_TOKEN" \
     -H "Content-Type: application/json" \

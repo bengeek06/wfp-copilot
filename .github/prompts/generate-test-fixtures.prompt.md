@@ -42,7 +42,7 @@ from app.config import TestingConfig
 def app():
     """Create application for testing session."""
     app = create_app(TestingConfig)
-    
+
     with app.app_context():
         yield app
 
@@ -51,9 +51,9 @@ def db(app):
     """Create database schema for testing session."""
     _db.app = app
     _db.create_all()
-    
+
     yield _db
-    
+
     _db.drop_all()
 
 @pytest.fixture(scope='function')
@@ -61,14 +61,14 @@ def session(db):
     """Create new database session for each test with rollback."""
     connection = db.engine.connect()
     transaction = connection.begin()
-    
+
     session = db.create_scoped_session(
         options={"bind": connection, "binds": {}}
     )
     db.session = session
-    
+
     yield session
-    
+
     transaction.rollback()
     connection.close()
     session.remove()
@@ -99,18 +99,18 @@ from app.models import Project, Task, User, Company
 
 class BaseFactory:
     """Base factory with common utilities."""
-    
+
     @staticmethod
     def _generate_uuid():
         return str(uuid.uuid4())
-    
+
     @staticmethod
     def _utc_now():
         return datetime.now(timezone.utc)
 
 class CompanyFactory(BaseFactory):
     """Factory for Company model."""
-    
+
     @staticmethod
     def create(session, **kwargs):
         defaults = {
@@ -121,12 +121,12 @@ class CompanyFactory(BaseFactory):
             'updated_at': CompanyFactory._utc_now(),
         }
         defaults.update(kwargs)
-        
+
         company = Company(**defaults)
         session.add(company)
         session.commit()
         return company
-    
+
     @staticmethod
     def create_batch(session, count=3, **kwargs):
         """Create multiple companies."""
@@ -142,13 +142,13 @@ class CompanyFactory(BaseFactory):
 
 class ProjectFactory(BaseFactory):
     """Factory for Project model."""
-    
+
     @staticmethod
     def create(session, company=None, **kwargs):
         # Create company if not provided
         if company is None:
             company = CompanyFactory.create(session)
-        
+
         defaults = {
             'id': ProjectFactory._generate_uuid(),
             'name': kwargs.get('name', 'Test Project'),
@@ -159,12 +159,12 @@ class ProjectFactory(BaseFactory):
             'updated_at': ProjectFactory._utc_now(),
         }
         defaults.update(kwargs)
-        
+
         project = Project(**defaults)
         session.add(project)
         session.commit()
         return project
-    
+
     @staticmethod
     def create_with_tasks(session, company=None, task_count=3, **kwargs):
         """Create project with related tasks."""
@@ -179,13 +179,13 @@ class ProjectFactory(BaseFactory):
 
 class TaskFactory(BaseFactory):
     """Factory for Task model."""
-    
+
     @staticmethod
     def create(session, project=None, company=None, **kwargs):
         # Create project if not provided
         if project is None:
             project = ProjectFactory.create(session, company=company)
-        
+
         defaults = {
             'id': TaskFactory._generate_uuid(),
             'title': kwargs.get('title', 'Test Task'),
@@ -198,12 +198,12 @@ class TaskFactory(BaseFactory):
             'updated_at': TaskFactory._utc_now(),
         }
         defaults.update(kwargs)
-        
+
         task = Task(**defaults)
         session.add(task)
         session.commit()
         return task
-    
+
     @staticmethod
     def create_batch(session, count=3, project=None, company=None, **kwargs):
         """Create multiple tasks."""
@@ -434,7 +434,7 @@ def test_create_project_with_permission(authenticated_client, company, mock_guar
         json={'name': 'New Project'}
     )
     assert response.status_code == 201
-    
+
     # Verify Guardian was called
     mock_guardian_granted.assert_called_once()
     call_args = mock_guardian_granted.call_args[1]
@@ -489,7 +489,7 @@ def test_filter_projects_by_status(authenticated_client, session, company, proje
     """Test filtering projects by different statuses."""
     # Create project with specific status
     project = ProjectFactory.create(session, company=company, status=project_status)
-    
+
     response = authenticated_client.get(f'/v0/projects?status={project_status}')
     assert response.status_code == 200
     data = response.get_json()
@@ -515,7 +515,7 @@ def test_task_combinations(authenticated_client, session, project, task_priority
         company=project.company,
         **task_priority_status
     )
-    
+
     response = authenticated_client.get(f'/v0/tasks/{task.id}')
     assert response.status_code == 200
     data = response.get_json()
@@ -549,7 +549,7 @@ def company_with_projects(session):
 def project_hierarchy(session, company):
     """Project with tasks and subtasks."""
     project = ProjectFactory.create(session, company=company)
-    
+
     # Parent tasks
     parent_tasks = TaskFactory.create_batch(
         session,
@@ -557,7 +557,7 @@ def project_hierarchy(session, company):
         project=project,
         company=company
     )
-    
+
     # Subtasks for each parent
     subtasks = []
     for parent in parent_tasks:
@@ -569,7 +569,7 @@ def project_hierarchy(session, company):
             parent_id=parent.id
         )
         subtasks.extend(subs)
-    
+
     return {
         'project': project,
         'parent_tasks': parent_tasks,
@@ -580,7 +580,7 @@ def project_hierarchy(session, company):
 def multi_company_data(session):
     """Multiple companies with isolated data."""
     companies = CompanyFactory.create_batch(session, count=3)
-    
+
     data = {}
     for company in companies:
         projects = ProjectFactory.create_batch(
@@ -592,18 +592,18 @@ def multi_company_data(session):
             'company': company,
             'projects': projects,
         }
-    
+
     return data
 
 # Usage in tests:
 def test_list_company_projects(authenticated_client, company_with_projects):
     """Test listing all projects for a company."""
     company, projects = company_with_projects
-    
+
     response = authenticated_client.get('/v0/projects')
     assert response.status_code == 200
     data = response.get_json()
-    
+
     # Should see only projects from user's company
     assert len(data['items']) == len(projects)
     assert all(p['company_id'] == company.id for p in data['items'])
@@ -612,10 +612,10 @@ def test_multi_tenancy_isolation(session, multi_company_data):
     """Test that companies can't access each other's data."""
     company1_id = list(multi_company_data.keys())[0]
     company2_id = list(multi_company_data.keys())[1]
-    
+
     # Query company1's projects
     projects = Project.query.filter_by(company_id=company1_id).all()
-    
+
     # Should only get company1's projects
     assert len(projects) == 2
     assert all(p.company_id == company1_id for p in projects)
@@ -646,15 +646,15 @@ def assert_response():
     def _assert(response, status_code=200, has_data=True, has_error=False):
         assert response.status_code == status_code
         data = response.get_json()
-        
+
         if has_data:
             assert data is not None
-        
+
         if has_error:
             assert 'error' in data or 'errors' in data
         else:
             assert 'error' not in data
-        
+
         return data
     return _assert
 
@@ -674,7 +674,7 @@ def test_list_projects(authenticated_client, api_url, assert_response):
     """Test project listing with helpers."""
     response = authenticated_client.get(api_url('projects'))
     data = assert_response(response, status_code=200)
-    
+
     assert 'items' in data
     assert 'total' in data
     assert isinstance(data['items'], list)
@@ -690,7 +690,7 @@ Automatic cleanup after tests:
 def temp_files():
     """Create and cleanup temporary files."""
     files = []
-    
+
     def _create(filename, content=''):
         import tempfile
         temp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=filename)
@@ -698,9 +698,9 @@ def temp_files():
         temp.close()
         files.append(temp.name)
         return temp.name
-    
+
     yield _create
-    
+
     # Cleanup
     import os
     for file in files:
@@ -711,13 +711,13 @@ def temp_files():
 def cleanup_db_records(session):
     """Track and cleanup database records created in test."""
     records = []
-    
+
     def _add(record):
         records.append(record)
         return record
-    
+
     yield _add
-    
+
     # Cleanup
     for record in records:
         session.delete(record)
@@ -805,9 +805,9 @@ def session(db):
     transaction = connection.begin()
     session = db.create_scoped_session(options={"bind": connection})
     db.session = session
-    
+
     yield session
-    
+
     transaction.rollback()
     connection.close()
     session.remove()
@@ -830,7 +830,7 @@ def user_token(company):
     import jwt
     from datetime import datetime, timedelta, timezone
     from app.config import TestingConfig
-    
+
     claims = {
         'user_id': str(uuid.uuid4()),
         'company_id': company.id,

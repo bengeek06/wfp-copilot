@@ -75,7 +75,7 @@ from .. import db
 
 class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
     """${entityName.capitalize()} database model.
-    
+
     Attributes:
         id: Unique UUID identifier.
         name: ${entityName.capitalize()} name.
@@ -84,17 +84,17 @@ class ${entityName.capitalize()}(UUIDMixin, TimestampMixin, db.Model):
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
-    
+
     __tablename__ = "${entityNamePlural}"
-    
+
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    
+
     __table_args__ = (
         Index("idx_${entityName}_name_active", "name", "is_active"),
     )
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"<${entityName.capitalize()}(id={self.id}, name={self.name})>"
@@ -121,15 +121,15 @@ from ..models.${entityName}_model import ${entityName.capitalize()}
 
 class ${entityName.capitalize()}Schema(SQLAlchemyAutoSchema):
     """Base schema for ${entityName} serialization.
-    
+
     Used for API responses. Includes all fields.
     """
-    
+
     class Meta:
         model = ${entityName.capitalize()}
         load_instance = True
         include_fk = True
-    
+
     id = fields.UUID(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
@@ -137,14 +137,14 @@ class ${entityName.capitalize()}Schema(SQLAlchemyAutoSchema):
 
 class ${entityName.capitalize()}CreateSchema(Schema):
     """Schema for creating a ${entityName}.
-    
+
     Validates POST /${entityNamePlural} requests.
     """
-    
+
     name = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     description = fields.Str(validate=validate.Length(max=1000))
     is_active = fields.Bool(load_default=True)
-    
+
     @validates("name")
     def validate_name(self, value: str) -> None:
         """Validate name is not empty after stripping."""
@@ -154,11 +154,11 @@ class ${entityName.capitalize()}CreateSchema(Schema):
 
 class ${entityName.capitalize()}UpdateSchema(Schema):
     """Schema for partially updating a ${entityName}.
-    
+
     Validates PATCH /${entityNamePlural}/<id> requests.
     All fields are optional.
     """
-    
+
     name = fields.Str(validate=validate.Length(min=1, max=255))
     description = fields.Str(validate=validate.Length(max=1000))
     is_active = fields.Bool()
@@ -166,11 +166,11 @@ class ${entityName.capitalize()}UpdateSchema(Schema):
 
 class ${entityName.capitalize()}ReplaceSchema(Schema):
     """Schema for completely replacing a ${entityName}.
-    
+
     Validates PUT /${entityNamePlural}/<id> requests.
     All business fields are required.
     """
-    
+
     name = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     description = fields.Str(validate=validate.Length(max=1000))
     is_active = fields.Bool(required=True)
@@ -213,27 +213,27 @@ from .. import db, limiter
 
 class ${entityName.capitalize()}ListResource(Resource):
     """Resource for ${entityName} collection operations.
-    
+
     Handles /v0/${entityNamePlural} endpoint for listing and creating ${entityNamePlural}.
     """
-    
+
     def __init__(self) -> None:
         """Initialize with schemas."""
         self.schema = ${entityName.capitalize()}Schema()
         self.create_schema = ${entityName.capitalize()}CreateSchema()
-    
+
     @require_jwt_auth
     @access_required(Operation.LIST)
     @limiter.limit("100/minute")
     def get(self) -> tuple[dict, int]:
         """List all ${entityNamePlural} with pagination.
-        
+
         Query Parameters:
             page (int): Page number (default: 1)
             per_page (int): Items per page (default: 20, max: 100)
             search (str): Search term for name
             is_active (bool): Filter by active status
-        
+
         Returns:
             Paginated list of ${entityNamePlural} with metadata.
         """
@@ -242,60 +242,60 @@ class ${entityName.capitalize()}ListResource(Resource):
             per_page = min(request.args.get("per_page", 20, type=int), 100)
             search = request.args.get("search", type=str)
             is_active = request.args.get("is_active", type=bool)
-            
+
             query = ${entityName.capitalize()}.query
-            
+
             if search:
                 query = query.filter(${entityName.capitalize()}.name.ilike(f"%{search}%"))
-            
+
             if is_active is not None:
                 query = query.filter(${entityName.capitalize()}.is_active == is_active)
-            
+
             pagination = query.order_by(${entityName.capitalize()}.created_at.desc()).paginate(
                 page=page,
                 per_page=per_page,
                 error_out=False
             )
-            
+
             return paginated_response(
                 data=self.schema.dump(pagination.items, many=True),
                 page=page,
                 per_page=per_page,
                 total=pagination.total
             )
-            
+
         except Exception as e:
             return error_response(
                 f"Failed to retrieve ${entityNamePlural}",
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.CREATE)
     @limiter.limit("20/minute")
     def post(self) -> tuple[dict, int]:
         """Create a new ${entityName}.
-        
+
         Request Body:
             JSON with ${entityName} data (validated by CreateSchema)
-        
+
         Returns:
             Created ${entityName} with 201 status.
         """
         try:
             data = self.create_schema.load(request.get_json())
-            
+
             ${entityName} = ${entityName.capitalize()}(**data)
             db.session.add(${entityName})
             db.session.commit()
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} created successfully",
                 status_code=201
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -313,36 +313,36 @@ class ${entityName.capitalize()}ListResource(Resource):
 
 class ${entityName.capitalize()}Resource(Resource):
     """Resource for individual ${entityName} operations.
-    
+
     Handles /v0/${entityNamePlural}/<${entityName}_id> endpoint.
     """
-    
+
     def __init__(self) -> None:
         """Initialize with schemas."""
         self.schema = ${entityName.capitalize()}Schema()
         self.update_schema = ${entityName.capitalize()}UpdateSchema()
         self.replace_schema = ${entityName.capitalize()}ReplaceSchema()
-    
+
     @require_jwt_auth
     @access_required(Operation.READ)
     @limiter.limit("200/minute")
     def get(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Retrieve a specific ${entityName}.
-        
+
         Args:
             ${entityName}_id: UUID of the ${entityName}.
-        
+
         Returns:
             ${entityName.capitalize()} data with 200 status.
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} not found")
-            
+
             return success_response(data=self.schema.dump(${entityName}))
-            
+
         except NotFoundError as e:
             return error_response(str(e), status_code=404)
         except Exception as e:
@@ -351,37 +351,37 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.UPDATE)
     @limiter.limit("50/minute")
     def patch(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Partially update a ${entityName}.
-        
+
         Args:
             ${entityName}_id: UUID of the ${entityName}.
-        
+
         Returns:
             Updated ${entityName} with 200 status.
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} not found")
-            
+
             data = self.update_schema.load(request.get_json(), partial=True)
-            
+
             for key, value in data.items():
                 setattr(${entityName}, key, value)
-            
+
             db.session.commit()
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} updated successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -397,37 +397,37 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.UPDATE)
     @limiter.limit("50/minute")
     def put(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Completely replace a ${entityName}.
-        
+
         Args:
             ${entityName}_id: UUID of the ${entityName}.
-        
+
         Returns:
             Replaced ${entityName} with 200 status.
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} not found")
-            
+
             data = self.replace_schema.load(request.get_json())
-            
+
             for key, value in data.items():
                 setattr(${entityName}, key, value)
-            
+
             db.session.commit()
-            
+
             return success_response(
                 data=self.schema.dump(${entityName}),
                 message="${entityName.capitalize()} replaced successfully"
             )
-            
+
         except ValidationError as e:
             return error_response(
                 "Validation failed",
@@ -443,33 +443,33 @@ class ${entityName.capitalize()}Resource(Resource):
                 status_code=500,
                 errors={"detail": str(e)}
             )
-    
+
     @require_jwt_auth
     @access_required(Operation.DELETE)
     @limiter.limit("20/minute")
     def delete(self, ${entityName}_id: str) -> tuple[dict, int]:
         """Delete a ${entityName}.
-        
+
         Args:
             ${entityName}_id: UUID of the ${entityName}.
-        
+
         Returns:
             Empty response with 204 status.
         """
         try:
             ${entityName} = ${entityName.capitalize()}.query.get(${entityName}_id)
-            
+
             if not ${entityName}:
                 raise NotFoundError(f"${entityName.capitalize()} not found")
-            
+
             db.session.delete(${entityName})
             db.session.commit()
-            
+
             return success_response(
                 message="${entityName.capitalize()} deleted successfully",
                 status_code=204
             )
-            
+
         except NotFoundError as e:
             return error_response(str(e), status_code=404)
         except Exception as e:
@@ -519,10 +519,10 @@ from src.app.models.${entityName}_model import ${entityName.capitalize()}
 
 class Test${entityName.capitalize()}Model:
     """Tests for ${entityName.capitalize()} model."""
-    
+
     def test_create_${entityName}(self, db_session):
         """Test creating a ${entityName}.
-        
+
         Given: Valid ${entityName} data
         When: ${entityName.capitalize()} is created
         Then: Instance has correct attributes
@@ -533,18 +533,18 @@ class Test${entityName.capitalize()}Model:
         )
         db_session.add(${entityName})
         db_session.commit()
-        
+
         assert ${entityName}.id is not None
         assert ${entityName}.name == "Test ${entityName.capitalize()}"
         assert ${entityName}.is_active is True
         assert ${entityName}.created_at is not None
-    
+
     def test_${entityName}_repr(self, db_session):
         """Test string representation."""
         ${entityName} = ${entityName.capitalize()}(name="Test")
         db_session.add(${entityName})
         db_session.commit()
-        
+
         assert "Test" in repr(${entityName})
         assert str(${entityName}.id) in repr(${entityName})
 ```
@@ -564,7 +564,7 @@ from src.app.schemas.${entityName}_schema import (
 
 class Test${entityName.capitalize()}CreateSchema:
     """Tests for ${entityName.capitalize()}CreateSchema."""
-    
+
     def test_valid_data(self):
         """Test schema with valid data."""
         schema = ${entityName.capitalize()}CreateSchema()
@@ -572,20 +572,20 @@ class Test${entityName.capitalize()}CreateSchema:
             "name": "Test ${entityName.capitalize()}",
             "description": "Test description"
         }
-        
+
         result = schema.load(data)
-        
+
         assert result["name"] == "Test ${entityName.capitalize()}"
         assert result["description"] == "Test description"
-    
+
     def test_missing_required_name(self):
         """Test schema with missing name."""
         schema = ${entityName.capitalize()}CreateSchema()
         data = {"description": "Test"}
-        
+
         with pytest.raises(ValidationError) as exc_info:
             schema.load(data)
-        
+
         assert "name" in exc_info.value.messages
 ```
 
@@ -600,84 +600,84 @@ from flask.testing import FlaskClient
 
 class Test${entityName.capitalize()}ListResource:
     """Tests for ${entityName.capitalize()}ListResource."""
-    
+
     def test_get_${entityNamePlural}_success(self, client: FlaskClient, auth_headers):
         """Test retrieving ${entityName} list.
-        
+
         Given: ${entityName.capitalize()}s exist
         When: GET /${entityNamePlural} is called
         Then: Returns 200 with list
         """
         response = client.get("/v0/${entityNamePlural}", headers=auth_headers)
-        
+
         assert response.status_code == 200
         assert "data" in response.json
         assert isinstance(response.json["data"], list)
-    
+
     def test_create_${entityName}_success(self, client: FlaskClient, auth_headers):
         """Test creating a ${entityName}."""
         data = {
             "name": "New ${entityName.capitalize()}",
             "description": "Test description"
         }
-        
+
         response = client.post("/v0/${entityNamePlural}", json=data, headers=auth_headers)
-        
+
         assert response.status_code == 201
         assert response.json["data"]["name"] == data["name"]
-    
+
     def test_create_${entityName}_validation_error(self, client: FlaskClient, auth_headers):
         """Test creating ${entityName} with invalid data."""
         data = {}  # Missing required name
-        
+
         response = client.post("/v0/${entityNamePlural}", json=data, headers=auth_headers)
-        
+
         assert response.status_code == 400
         assert "errors" in response.json
 
 
 class Test${entityName.capitalize()}Resource:
     """Tests for ${entityName.capitalize()}Resource."""
-    
+
     def test_get_${entityName}_success(self, client: FlaskClient, auth_headers, sample_${entityName}):
         """Test retrieving existing ${entityName}."""
         response = client.get(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["data"]["id"] == str(sample_${entityName}.id)
-    
+
     def test_get_${entityName}_not_found(self, client: FlaskClient, auth_headers):
         """Test retrieving non-existent ${entityName}."""
         response = client.get(
             "/v0/${entityNamePlural}/00000000-0000-0000-0000-000000000000",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 404
-    
+
     def test_update_${entityName}_success(self, client: FlaskClient, auth_headers, sample_${entityName}):
         """Test updating a ${entityName}."""
         data = {"name": "Updated Name"}
-        
+
         response = client.patch(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             json=data,
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         assert response.json["data"]["name"] == "Updated Name"
-    
+
     def test_delete_${entityName}_success(self, client: FlaskClient, auth_headers, sample_${entityName}):
         """Test deleting a ${entityName}."""
         response = client.delete(
             f"/v0/${entityNamePlural}/{sample_${entityName}.id}",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 204
 ```
 

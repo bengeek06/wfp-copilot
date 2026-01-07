@@ -81,27 +81,27 @@ For the main resource:
 CREATE TABLE ${resource_plural} (
     -- Primary key (UUID)
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
+
     -- Required fields from spec
     ${field_name} ${field_type} NOT NULL,
-    
+
     -- Optional fields from spec
     ${optional_field} ${field_type} NULL,
-    
+
     -- Foreign keys
     ${related_entity}_id UUID NOT NULL REFERENCES ${related_table}(id) ON DELETE CASCADE,
-    
+
     -- Tenant isolation (multi-tenancy)
     company_id UUID NOT NULL,
-    
+
     -- Soft delete (if needed)
     is_active BOOLEAN DEFAULT true NOT NULL,
     deleted_at TIMESTAMP NULL,
-    
+
     -- Audit timestamps (automatic)
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT ${table}_pkey PRIMARY KEY (id),
     CONSTRAINT ${table}_company_fk FOREIGN KEY (company_id) REFERENCES companies(id),
@@ -129,27 +129,27 @@ Create indexes for:
 -- Index naming convention: idx_{table}_{column(s)}
 
 -- Foreign key indexes (always!)
-CREATE INDEX idx_${resource_plural}_company_id 
+CREATE INDEX idx_${resource_plural}_company_id
     ON ${resource_plural}(company_id);
-CREATE INDEX idx_${resource_plural}_${related}_id 
+CREATE INDEX idx_${resource_plural}_${related}_id
     ON ${resource_plural}(${related_entity}_id);
 
 -- Filter indexes
-CREATE INDEX idx_${resource_plural}_is_active 
-    ON ${resource_plural}(is_active) 
+CREATE INDEX idx_${resource_plural}_is_active
+    ON ${resource_plural}(is_active)
     WHERE is_active = true;  -- Partial index for active records only
 
 -- Sort indexes (DESC for typical newest-first)
-CREATE INDEX idx_${resource_plural}_created_at 
+CREATE INDEX idx_${resource_plural}_created_at
     ON ${resource_plural}(created_at DESC);
 
 -- Composite indexes (order matters! Most selective first)
-CREATE INDEX idx_${resource_plural}_company_active 
+CREATE INDEX idx_${resource_plural}_company_active
     ON ${resource_plural}(company_id, is_active)
     WHERE is_active = true;
 
 -- Full-text search (if applicable)
-CREATE INDEX idx_${resource_plural}_name_search 
+CREATE INDEX idx_${resource_plural}_name_search
     ON ${resource_plural} USING GIN (to_tsvector('english', name));
 ```
 
@@ -256,39 +256,39 @@ depends_on = None
 
 def upgrade() -> None:
     """Create ${resource_plural} table with indexes and constraints."""
-    
+
     # Create table
     op.create_table(
         '${resource_plural}',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, 
+        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True,
                   server_default=sa.text('gen_random_uuid()')),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('company_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('created_at', sa.TIMESTAMP(), nullable=False, 
+        sa.Column('created_at', sa.TIMESTAMP(), nullable=False,
                   server_default=sa.text('CURRENT_TIMESTAMP')),
-        sa.Column('updated_at', sa.TIMESTAMP(), nullable=False, 
+        sa.Column('updated_at', sa.TIMESTAMP(), nullable=False,
                   server_default=sa.text('CURRENT_TIMESTAMP')),
-        
+
         # Constraints
         sa.PrimaryKeyConstraint('id', name='${resource_plural}_pkey'),
-        sa.UniqueConstraint('name', 'company_id', 
+        sa.UniqueConstraint('name', 'company_id',
                            name='uq_${resource_plural}_name_company'),
         sa.CheckConstraint('length(name) >= 3 AND length(name) <= 255',
                           name='ck_${resource_plural}_name_length'),
     )
-    
+
     # Create indexes
-    op.create_index('idx_${resource_plural}_company_id', 
+    op.create_index('idx_${resource_plural}_company_id',
                     '${resource_plural}', ['company_id'])
-    op.create_index('idx_${resource_plural}_created_at', 
-                    '${resource_plural}', ['created_at'], 
+    op.create_index('idx_${resource_plural}_created_at',
+                    '${resource_plural}', ['created_at'],
                     postgresql_ops={'created_at': 'DESC'})
-    op.create_index('idx_${resource_plural}_is_active', 
+    op.create_index('idx_${resource_plural}_is_active',
                     '${resource_plural}', ['is_active'],
                     postgresql_where=sa.text('is_active = true'))
-    
+
     # Create trigger for updated_at
     op.execute("""
         CREATE TRIGGER update_${resource_plural}_updated_at
@@ -300,15 +300,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop ${resource_plural} table."""
-    
+
     # Drop trigger first
     op.execute('DROP TRIGGER IF EXISTS update_${resource_plural}_updated_at ON ${resource_plural}')
-    
+
     # Drop indexes (automatically dropped with table, but explicit for clarity)
     op.drop_index('idx_${resource_plural}_is_active', table_name='${resource_plural}')
     op.drop_index('idx_${resource_plural}_created_at', table_name='${resource_plural}')
     op.drop_index('idx_${resource_plural}_company_id', table_name='${resource_plural}')
-    
+
     # Drop table (CASCADE removes dependent objects)
     op.drop_table('${resource_plural}')
 ```

@@ -1,0 +1,89 @@
+# Pre-commit hooks for code quality
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# Update hooks: pre-commit autoupdate
+
+repos:
+  # isort - Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        args: [--settings-path=pyproject.toml]
+
+  # Ruff - Fast Python linter (replaces flake8, pylint, etc.)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # MyPy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+        args: [--config-file=pyproject.toml]
+        exclude: ^(tests/|migrations/)
+
+  # Interrogate - Docstring coverage checker
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        args: [-c, pyproject.toml]
+        pass_filenames: false
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Prevent committing large files
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      # Check for debugger imports
+      - id: debug-statements
+      # Check YAML files
+      - id: check-yaml
+      # Check TOML files
+      - id: check-toml
+      # Check JSON files
+      - id: check-json
+      # Fix end of files
+      - id: end-of-file-fixer
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      # Check that scripts have shebangs
+      - id: check-shebang-scripts-are-executable
+      # Check for private keys
+      - id: detect-private-key
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.2
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -r, app/]
+        additional_dependencies: ["bandit[toml]"]
+
+# Configuration for pre-commit.ci (optional cloud service)
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

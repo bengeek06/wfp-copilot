@@ -71,7 +71,7 @@ from datetime import datetime, timezone
 
 class TestProjectManagementJourney:
     """E2E test for complete project lifecycle."""
-    
+
     @pytest.fixture(autouse=True)
     def setup_journey(self, session, company):
         """Set up journey context."""
@@ -79,7 +79,7 @@ class TestProjectManagementJourney:
         self.project_id = None
         self.task_ids = []
         self.team_member_ids = []
-    
+
     def test_complete_project_journey(
         self,
         authenticated_client,
@@ -89,7 +89,7 @@ class TestProjectManagementJourney:
     ):
         """
         Test complete project management journey.
-        
+
         Journey Steps:
         1. Admin creates project
         2. Admin adds team members
@@ -106,7 +106,7 @@ class TestProjectManagementJourney:
             'description': 'End-to-end test project',
             'status': 'active'
         }
-        
+
         response = admin_client.post(
             api_url('projects'),
             json=project_data
@@ -114,21 +114,21 @@ class TestProjectManagementJourney:
         assert response.status_code == 201
         project = response.get_json()
         self.project_id = project['id']
-        
+
         assert project['name'] == project_data['name']
         assert project['status'] == 'active'
         assert project['company_id'] == self.company.id
-        
+
         # === Step 2: Add Team Members ===
         # (Simulate Guardian role assignment)
         team_members = [
             {'email': 'member1@example.com', 'role': 'editor'},
             {'email': 'member2@example.com', 'role': 'editor'},
         ]
-        
+
         # Note: Actual implementation would call Identity + Guardian APIs
         # For E2E test, we mock the authorization checks
-        
+
         # === Step 3: Create Tasks ===
         tasks_data = [
             {
@@ -153,7 +153,7 @@ class TestProjectManagementJourney:
                 'project_id': self.project_id
             },
         ]
-        
+
         for task_data in tasks_data:
             response = authenticated_client.post(
                 api_url('tasks'),
@@ -162,20 +162,20 @@ class TestProjectManagementJourney:
             assert response.status_code == 201
             task = response.get_json()
             self.task_ids.append(task['id'])
-            
+
             assert task['project_id'] == self.project_id
             assert task['status'] == 'todo'
-        
+
         # === Step 4: Verify Project Has Tasks ===
         response = authenticated_client.get(
             api_url(f'projects/{self.project_id}/tasks')
         )
         assert response.status_code == 200
         project_tasks = response.get_json()
-        
+
         assert project_tasks['total'] == 3
         assert len(project_tasks['items']) == 3
-        
+
         # === Step 5: Update Task Status (In Progress) ===
         task1_id = self.task_ids[0]
         response = authenticated_client.patch(
@@ -185,7 +185,7 @@ class TestProjectManagementJourney:
         assert response.status_code == 200
         task = response.get_json()
         assert task['status'] == 'in_progress'
-        
+
         # === Step 6: Complete Tasks ===
         for task_id in self.task_ids:
             response = authenticated_client.patch(
@@ -195,7 +195,7 @@ class TestProjectManagementJourney:
             assert response.status_code == 200
             task = response.get_json()
             assert task['status'] == 'done'
-        
+
         # === Step 7: Verify All Tasks Completed ===
         response = authenticated_client.get(
             api_url(f'projects/{self.project_id}/tasks?status=done')
@@ -203,7 +203,7 @@ class TestProjectManagementJourney:
         assert response.status_code == 200
         completed_tasks = response.get_json()
         assert completed_tasks['total'] == 3
-        
+
         # === Step 8: Archive Project ===
         response = admin_client.patch(
             api_url(f'projects/{self.project_id}'),
@@ -212,23 +212,23 @@ class TestProjectManagementJourney:
         assert response.status_code == 200
         project = response.get_json()
         assert project['status'] == 'archived'
-        
+
         # === Step 9: Verify Project in Archive ===
         response = authenticated_client.get(
             api_url('projects?status=archived')
         )
         assert response.status_code == 200
         archived_projects = response.get_json()
-        
+
         archived_project_ids = [p['id'] for p in archived_projects['items']]
         assert self.project_id in archived_project_ids
-        
+
         # === Step 10: Cleanup (Delete) ===
         response = admin_client.delete(
             api_url(f'projects/{self.project_id}')
         )
         assert response.status_code == 204
-        
+
         # Verify deleted
         response = authenticated_client.get(
             api_url(f'projects/{self.project_id}')
@@ -248,11 +248,11 @@ import pytest
 
 class TestAuthenticationFlow:
     """E2E tests for authentication workflows."""
-    
+
     def test_login_access_logout_journey(self, client, api_url):
         """
         Test complete authentication flow.
-        
+
         Steps:
         1. Login with valid credentials
         2. Receive JWT token in cookie
@@ -266,25 +266,25 @@ class TestAuthenticationFlow:
             'email': 'test@example.com',
             'password': 'SecurePass123!'
         }
-        
+
         response = client.post(
             api_url('auth/login'),
             json=login_data
         )
         assert response.status_code == 200
-        
+
         # Extract token from Set-Cookie header
         set_cookie = response.headers.get('Set-Cookie')
         assert 'access_token=' in set_cookie
-        
+
         # Token is automatically set in cookie jar
-        
+
         # === Step 2: Access Protected Resource ===
         response = client.get(api_url('projects'))
         assert response.status_code == 200
         projects = response.get_json()
         assert 'items' in projects
-        
+
         # === Step 3: Create Resource (Write Operation) ===
         response = client.post(
             api_url('projects'),
@@ -293,41 +293,41 @@ class TestAuthenticationFlow:
         assert response.status_code == 201
         project = response.get_json()
         project_id = project['id']
-        
+
         # === Step 4: Refresh Token ===
         response = client.post(api_url('auth/refresh'))
         assert response.status_code == 200
-        
+
         # New token set in cookie
         set_cookie = response.headers.get('Set-Cookie')
         assert 'access_token=' in set_cookie
-        
+
         # === Step 5: Logout ===
         response = client.post(api_url('auth/logout'))
         assert response.status_code == 200
-        
+
         # Token cleared from cookie
         set_cookie = response.headers.get('Set-Cookie')
         assert 'access_token=;' in set_cookie or 'Max-Age=0' in set_cookie
-        
+
         # === Step 6: Verify Cannot Access ===
         response = client.get(api_url('projects'))
         assert response.status_code == 401
         error = response.get_json()
         assert 'unauthorized' in error['error'].lower()
-        
+
         # === Cleanup ===
         # Login again to delete test project
         response = client.post(api_url('auth/login'), json=login_data)
         assert response.status_code == 200
-        
+
         response = client.delete(api_url(f'projects/{project_id}'))
         assert response.status_code == 204
-    
+
     def test_expired_token_refresh_flow(self, client, api_url, jwt_secret):
         """
         Test token expiration and refresh.
-        
+
         Steps:
         1. Login and get token
         2. Wait for token to expire (or mock expiry)
@@ -341,11 +341,11 @@ class TestAuthenticationFlow:
             json={'email': 'test@example.com', 'password': 'SecurePass123!'}
         )
         assert response.status_code == 200
-        
+
         # Mock token expiry by replacing with expired token
         import jwt
         from datetime import datetime, timedelta, timezone
-        
+
         expired_claims = {
             'user_id': 'test-user-id',
             'company_id': 'test-company-id',
@@ -353,17 +353,17 @@ class TestAuthenticationFlow:
             'exp': datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
         }
         expired_token = jwt.encode(expired_claims, jwt_secret, algorithm='HS256')
-        
+
         client.set_cookie('access_token', expired_token)
-        
+
         # Try to access resource with expired token
         response = client.get(api_url('projects'))
         assert response.status_code == 401
-        
+
         # Refresh token
         response = client.post(api_url('auth/refresh'))
         assert response.status_code == 200
-        
+
         # Access resource with new token
         response = client.get(api_url('projects'))
         assert response.status_code == 200
@@ -381,7 +381,7 @@ import pytest
 
 class TestAuthorizationScenarios:
     """E2E tests for role-based access control."""
-    
+
     @pytest.fixture
     def viewer_client(self, client, company, generate_jwt):
         """Client with viewer role."""
@@ -394,7 +394,7 @@ class TestAuthorizationScenarios:
         token = generate_jwt(claims)
         client.set_cookie('access_token', token)
         return client
-    
+
     @pytest.fixture
     def editor_client(self, client, company, generate_jwt):
         """Client with editor role."""
@@ -407,7 +407,7 @@ class TestAuthorizationScenarios:
         token = generate_jwt(claims)
         client.set_cookie('access_token', token)
         return client
-    
+
     @pytest.fixture
     def admin_client(self, client, company, generate_jwt):
         """Client with admin role."""
@@ -420,7 +420,7 @@ class TestAuthorizationScenarios:
         token = generate_jwt(claims)
         client.set_cookie('access_token', token)
         return client
-    
+
     def test_role_based_access_journey(
         self,
         viewer_client,
@@ -432,87 +432,87 @@ class TestAuthorizationScenarios:
     ):
         """
         Test different access levels for different roles.
-        
+
         Roles:
         - Viewer: Can list and read, cannot create/update/delete
         - Editor: Can list, read, create, update, cannot delete
         - Admin: Full access (create, read, update, delete)
         """
         from tests.factories import ProjectFactory
-        
+
         # Create test project as admin
         test_project = ProjectFactory.create(session, company=company)
-        
+
         # === Viewer Tests ===
         # Can list
         response = viewer_client.get(api_url('projects'))
         assert response.status_code == 200
-        
+
         # Can read
         response = viewer_client.get(api_url(f'projects/{test_project.id}'))
         assert response.status_code == 200
-        
+
         # Cannot create (403 Forbidden)
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': False, 'reason': 'no_permission'}
-            
+
             response = viewer_client.post(
                 api_url('projects'),
                 json={'name': 'Viewer Project'}
             )
             assert response.status_code == 403
-        
+
         # Cannot update
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': False, 'reason': 'no_permission'}
-            
+
             response = viewer_client.patch(
                 api_url(f'projects/{test_project.id}'),
                 json={'name': 'Updated Name'}
             )
             assert response.status_code == 403
-        
+
         # Cannot delete
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': False, 'reason': 'no_permission'}
-            
+
             response = viewer_client.delete(api_url(f'projects/{test_project.id}'))
             assert response.status_code == 403
-        
+
         # === Editor Tests ===
         # Can create
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': True, 'reason': 'granted'}
-            
+
             response = editor_client.post(
                 api_url('projects'),
                 json={'name': 'Editor Project'}
             )
             assert response.status_code == 201
             editor_project = response.get_json()
-        
+
         # Can update
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': True, 'reason': 'granted'}
-            
+
             response = editor_client.patch(
                 api_url(f'projects/{editor_project["id"]}'),
                 json={'name': 'Updated Editor Project'}
             )
             assert response.status_code == 200
-        
+
         # Cannot delete (403)
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': False, 'reason': 'no_permission'}
-            
+
             response = editor_client.delete(api_url(f'projects/{editor_project["id"]}'))
             assert response.status_code == 403
-        
+
         # === Admin Tests ===
         # Can delete
         with pytest.mock.patch('app.services.guardian.GuardianService.check_access') as mock_guardian:
             mock_guardian.return_value = {'access_granted': True, 'reason': 'granted'}
-            
+
             response = admin_client.delete(api_url(f'projects/{editor_project["id"]}'))
             assert response.status_code == 204
 ```
@@ -529,7 +529,7 @@ import pytest
 
 class TestMultiTenancyIsolation:
     """Verify companies cannot access each other's data."""
-    
+
     def test_company_data_isolation(
         self,
         session,
@@ -539,7 +539,7 @@ class TestMultiTenancyIsolation:
     ):
         """
         Test that Company A cannot access Company B's data.
-        
+
         Steps:
         1. Create data for Company A
         2. Create data for Company B
@@ -550,11 +550,11 @@ class TestMultiTenancyIsolation:
         7. Verify cannot access Company A data
         """
         from tests.factories import CompanyFactory, ProjectFactory
-        
+
         # === Setup: Create two companies with data ===
         company_a = CompanyFactory.create(session, name='Company A')
         company_b = CompanyFactory.create(session, name='Company B')
-        
+
         project_a1 = ProjectFactory.create(
             session,
             company=company_a,
@@ -565,7 +565,7 @@ class TestMultiTenancyIsolation:
             company=company_a,
             name='Company A Project 2'
         )
-        
+
         project_b1 = ProjectFactory.create(
             session,
             company=company_b,
@@ -576,7 +576,7 @@ class TestMultiTenancyIsolation:
             company=company_b,
             name='Company B Project 2'
         )
-        
+
         # === Login as Company A user ===
         claims_a = {
             'user_id': 'user-a-id',
@@ -585,30 +585,30 @@ class TestMultiTenancyIsolation:
         }
         token_a = generate_jwt(claims_a)
         client.set_cookie('access_token', token_a)
-        
+
         # List projects → Should only see Company A projects
         response = client.get(api_url('projects'))
         assert response.status_code == 200
         projects = response.get_json()
-        
+
         assert projects['total'] == 2
         project_ids = [p['id'] for p in projects['items']]
         assert project_a1.id in project_ids
         assert project_a2.id in project_ids
         assert project_b1.id not in project_ids
         assert project_b2.id not in project_ids
-        
+
         # Try to access Company B project → 404 Not Found
         response = client.get(api_url(f'projects/{project_b1.id}'))
         assert response.status_code == 404
-        
+
         # Try to update Company B project → 404 Not Found
         response = client.patch(
             api_url(f'projects/{project_b1.id}'),
             json={'name': 'Hacked Name'}
         )
         assert response.status_code == 404
-        
+
         # === Login as Company B user ===
         claims_b = {
             'user_id': 'user-b-id',
@@ -617,19 +617,19 @@ class TestMultiTenancyIsolation:
         }
         token_b = generate_jwt(claims_b)
         client.set_cookie('access_token', token_b)
-        
+
         # List projects → Should only see Company B projects
         response = client.get(api_url('projects'))
         assert response.status_code == 200
         projects = response.get_json()
-        
+
         assert projects['total'] == 2
         project_ids = [p['id'] for p in projects['items']]
         assert project_b1.id in project_ids
         assert project_b2.id in project_ids
         assert project_a1.id not in project_ids
         assert project_a2.id not in project_ids
-        
+
         # Try to access Company A project → 404 Not Found
         response = client.get(api_url(f'projects/{project_a1.id}'))
         assert response.status_code == 404
@@ -647,7 +647,7 @@ import pytest
 
 class TestErrorRecoveryFlow:
     """Test error scenarios and recovery paths."""
-    
+
     def test_validation_error_recovery(
         self,
         authenticated_client,
@@ -656,7 +656,7 @@ class TestErrorRecoveryFlow:
     ):
         """
         Test validation error handling and correction.
-        
+
         Steps:
         1. Submit invalid data → 422 Validation Error
         2. Correct errors based on response
@@ -668,35 +668,35 @@ class TestErrorRecoveryFlow:
             'description': 'Test project',
             'status': 'invalid_status'  # Invalid enum value
         }
-        
+
         response = authenticated_client.post(
             api_url('projects'),
             json=invalid_data
         )
         assert response.status_code == 422
         errors = response.get_json()
-        
+
         assert 'errors' in errors
         assert 'name' in errors['errors']  # Missing required field
         assert 'status' in errors['errors']  # Invalid enum
-        
+
         # === Attempt 2: Fix errors and retry ===
         corrected_data = {
             'name': 'Corrected Project',  # Add missing field
             'description': 'Test project',
             'status': 'active'  # Use valid enum value
         }
-        
+
         response = authenticated_client.post(
             api_url('projects'),
             json=corrected_data
         )
         assert response.status_code == 201
         project = response.get_json()
-        
+
         assert project['name'] == 'Corrected Project'
         assert project['status'] == 'active'
-    
+
     def test_conflict_resolution(
         self,
         authenticated_client,
@@ -706,27 +706,27 @@ class TestErrorRecoveryFlow:
     ):
         """
         Test handling duplicate/conflict errors.
-        
+
         Steps:
         1. Create project with unique name
         2. Try to create duplicate → 409 Conflict
         3. Use different name → 201 Created
         """
         from tests.factories import ProjectFactory
-        
+
         # Create existing project
         existing = ProjectFactory.create(
             session,
             company=company,
             name='Existing Project'
         )
-        
+
         # === Attempt to create duplicate ===
         duplicate_data = {
             'name': 'Existing Project',  # Same name
             'description': 'Duplicate'
         }
-        
+
         response = authenticated_client.post(
             api_url('projects'),
             json=duplicate_data
@@ -734,13 +734,13 @@ class TestErrorRecoveryFlow:
         assert response.status_code == 409
         error = response.get_json()
         assert 'already exists' in error['message'].lower()
-        
+
         # === Use unique name ===
         unique_data = {
             'name': 'Unique Project',  # Different name
             'description': 'New project'
         }
-        
+
         response = authenticated_client.post(
             api_url('projects'),
             json=unique_data

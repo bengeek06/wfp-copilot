@@ -1,0 +1,93 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: contact@waterfall-project.pro
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: wfp-postgres-test
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: testdb
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      test-network:
+        aliases:
+          - db_service
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: wfp-redis-test
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - test-network
+
+  guardian-test:
+    build:
+      context: ../wfp-guardian
+      dockerfile: Dockerfile
+    container_name: wfp-guardian-test
+    environment:
+      FLASK_ENV: testing
+      DATABASE_TYPE: postgresql
+      DATABASE_HOST: postgres-test
+      DATABASE_PORT: 5432
+      DATABASE_NAME: testdb
+      DATABASE_USER: testuser
+      DATABASE_PASSWORD: testpassword
+      DATABASE_URL: postgresql://testuser:testpassword@postgres-test:5432/testdb
+      REDIS_HOST: redis-test
+      REDIS_PORT: 6379
+      SERVICE_PORT: 5002
+      IDENTITY_SERVICE_URL: http://identity-test:5001
+      JWT_SECRET: test-secret-key-shared
+      JWT_ALGORITHM: HS256
+      LOG_LEVEL: INFO
+      WAIT_FOR_DB: "true"
+      RUN_MIGRATIONS: "true"
+      APP_MODE: development
+      USE_GUARDIAN_SERVICE: "false"
+    ports:
+      - "5002:5002"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      identity-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/v0/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  postgres-test-data:
+  redis-test-data:

@@ -89,4 +89,3 @@ Configs in `app/config.py`: `DevelopmentConfig`, `TestingConfig`, `IntegrationCo
 
 ## File Naming
 Models: `{entity}_model.py` | Schemas: `{entity}_schema.py` | Resources: `{entity}_res.py` | Tests: `test_{module}.py`
-
