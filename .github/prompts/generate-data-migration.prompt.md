@@ -1,7 +1,7 @@
 ---
 description: "Generate Alembic data migrations for schema changes, data transformations, and backfills with rollback support"
 agent: "Flask API Expert"
-tools: ["search", "search/codebase", "runCommands"]
+tools: ["search", "search/codebase", "execute/getTerminalOutput","execute/runInTerminal","read/terminalLastCommand","read/terminalSelection"]
 ---
 
 # Generate Data Migration

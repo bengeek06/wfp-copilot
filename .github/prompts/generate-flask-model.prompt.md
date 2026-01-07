@@ -1,6 +1,6 @@
 ---
 description: "Generate a SQLAlchemy model with proper mixins, type hints, indexes, and relationships following wfp-flask-template conventions"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "read/problems"]
 ---
 

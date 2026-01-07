@@ -1,6 +1,6 @@
 ---
 description: "Generate a comprehensive REST API endpoint specification following the specification agent template with detailed requirements, acceptance criteria, and OpenAPI schemas"
-agent: "agent"
+agent: "specification"
 tools: ["edit", "search", "search/codebase", "web/fetch"]
 ---
 

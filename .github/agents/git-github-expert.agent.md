@@ -1,7 +1,7 @@
 ---
 description: Expert in Git workflows and GitHub collaboration
 name: Git & GitHub Expert
-tools: ['web/githubRepo']
+tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'github/*', 'agent', 'todo']
 model: Claude Sonnet 4.5
 ---
 

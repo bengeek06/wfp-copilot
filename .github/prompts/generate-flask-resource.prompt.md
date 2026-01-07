@@ -1,6 +1,6 @@
 ---
 description: "Generate a complete CRUD resource for Flask API including SQLAlchemy model, Marshmallow schemas, Flask-RESTful resource classes, route registration, and comprehensive tests following wfp-flask-template architecture"
-agent: "agent"
+agent: "Flask API Expert"
 tools: ["edit", "search", "search/codebase", "execute/getTerminalOutput", "execute/runInTerminal", "read/terminalLastCommand", "read/terminalSelection", "execute/createAndRunTask", "execute/getTaskOutput", "execute/runTask", "read/problems", "todo"]
 ---
 

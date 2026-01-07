@@ -1,0 +1,42 @@
+name: OpenAPI Lint
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'openapi/**/*.yaml'
+      - '.redocly.yaml'
+  push:
+    branches:
+      - develop
+      - main
+      - 'feature/**'
+    paths:
+      - 'openapi/**/*.yaml'
+      - '.redocly.yaml'
+
+jobs:
+  lint:
+    name: Lint OpenAPI specs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: openapi-lint-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Lint with Redocly CLI
+        run: npx --yes @redocly/cli@latest lint --config .redocly.yaml openapi/**/*.yaml

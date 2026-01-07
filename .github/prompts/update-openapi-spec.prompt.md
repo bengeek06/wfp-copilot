@@ -1,6 +1,6 @@
 ---
 description: "Update OpenAPI 3.x specification with new paths, schemas, and operations for a Flask resource following wfp-flask-template API documentation standards"
-agent: "agent"
+agent: "specification"
 tools: ["edit", "search", "search/codebase", "web/fetch"]
 ---
 
