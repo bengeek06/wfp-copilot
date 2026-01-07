@@ -35,6 +35,7 @@ dependencies = [
     "gunicorn",
     "requests",
     "prometheus-flask-exporter",
+    "python-json-logger",
 ]
 
 [project.optional-dependencies]

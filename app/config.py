@@ -176,6 +176,7 @@ class DevelopmentConfig(Config):
     DEBUG: bool = True
     SQLALCHEMY_ECHO: bool = True
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "DEBUG")
+    LOG_FORMAT: str = "text"
     JWT_COOKIE_SECURE: bool = False
 
 
@@ -192,6 +193,8 @@ class TestingConfig(Config):
         "TEST_DATABASE_URL", "sqlite:///:memory:"
     )
     SQLALCHEMY_ECHO: bool = False
+    LOG_LEVEL: str = "WARNING"
+    LOG_FORMAT: str = "text"
     JWT_COOKIE_SECURE: bool = False
     RATE_LIMIT_ENABLED: bool = False
     PROMETHEUS_METRICS_ENABLED: bool = False
@@ -210,6 +213,7 @@ class IntegrationConfig(Config):
     TESTING: bool = True
     SQLALCHEMY_ECHO: bool = True
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "DEBUG")
+    LOG_FORMAT: str = "text"
     JWT_COOKIE_SECURE: bool = False
 
 
@@ -223,6 +227,7 @@ class StagingConfig(Config):
     DEBUG: bool = False
     SQLALCHEMY_ECHO: bool = False
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+    LOG_FORMAT: str = "json"
     JWT_COOKIE_SECURE: bool = True
     ENABLE_SWAGGER_UI: bool = True
 
@@ -238,6 +243,7 @@ class ProductionConfig(Config):
     TESTING: bool = False
     SQLALCHEMY_ECHO: bool = False
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "WARNING")
+    LOG_FORMAT: str = "json"
     JWT_COOKIE_SECURE: bool = True
     ENABLE_SWAGGER_UI: bool = False
 

@@ -101,4 +101,9 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
                 response.headers[header] = value
             return response
 
+    # Configure logging
+    from app.utils.logger import setup_logging
+
+    setup_logging(app)
+
     return app
