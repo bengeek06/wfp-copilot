@@ -6,13 +6,13 @@
 #
 # See LICENSE and LICENSE.md files in the root directory for full license text.
 # For commercial licensing inquiries, contact: contact@waterfall-project.pro
+"""SQLAlchemy database instance.
 
-"""Database models package.
-
-Provides SQLAlchemy database instance, custom types, and mixins for models.
+This module initializes the SQLAlchemy instance (db) for the application.
+The db object is used throughout the application for ORM operations and
+database management.
 """
 
-from app.models.db import db
-from app.models.types import GUID, JSONB, TimestampMixin, UUIDMixin
+from flask_sqlalchemy import SQLAlchemy
 
-__all__ = ["db", "GUID", "JSONB", "UUIDMixin", "TimestampMixin"]
+db = SQLAlchemy()
