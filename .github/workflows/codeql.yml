@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, staging, develop ]
   pull_request:
-    branches: [ main, staging ]
+    branches: [ main, staging, develop ]
   schedule:
     # Run every Monday at 09:00 UTC
     - cron: '0 9 * * 1'
@@ -33,6 +33,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
+          tools: latest
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
