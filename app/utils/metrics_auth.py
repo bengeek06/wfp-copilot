@@ -28,6 +28,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: Any) -> str | None:
+    """Sanitize potentially untrusted values before logging.
+
+    Removes newline and carriage-return characters to reduce log injection risk.
+    """
+    if value is None:
+        return None
+    text = str(value)
+    # Strip CRLF and LF characters that could break log lines
+    return text.replace("\r\n", "").replace("\r", "").replace("\n", "")
+
+
 def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to enforce API key authentication for metrics endpoint.
 
@@ -113,8 +125,8 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
             logger.warning(
                 "Invalid metrics API key attempt",
                 extra={
-                    "ip": request.remote_addr,
-                    "path": request.path,
+                    "ip": _sanitize_for_log(request.remote_addr),
+                    "path": _sanitize_for_log(request.path),
                     "key_length": len(provided_key),
                 },
             )
