@@ -28,8 +28,17 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
+          - flask
+          - flask-cors
+          - flask-limiter
+          - flask-marshmallow
+          - flask-migrate
+          - flask-sqlalchemy
+          - prometheus-client
+          - prometheus-flask-exporter
+          - pytest
         args: [--config-file=pyproject.toml]
-        exclude: ^(tests/|migrations/)
+        exclude: ^migrations/
 
   # Interrogate - Docstring coverage checker
   - repo: https://github.com/econchick/interrogate

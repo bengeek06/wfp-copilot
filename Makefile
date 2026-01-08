@@ -62,7 +62,7 @@ lint:
 # Type checking
 type-check:
 	@echo "Running mypy..."
-	mypy app/ --config-file=pyproject.toml
+	mypy app/ tests/ --config-file=pyproject.toml
 	@echo "✓ Type checking complete"
 
 # Check docstring presence

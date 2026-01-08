@@ -113,7 +113,7 @@ class TestCorrelationIdFilter:
             result = correlation_filter.filter(record)
 
             assert result is True
-            assert record.correlation_id == "test-id-123"
+        assert record.correlation_id == "test-id-123"  # type: ignore[attr-defined]
 
     def test_correlation_id_filter_handles_missing_context(self) -> None:
         """Test that filter handles missing request context gracefully.
@@ -137,7 +137,7 @@ class TestCorrelationIdFilter:
         result = correlation_filter.filter(record)
 
         assert result is True
-        assert record.correlation_id == "N/A"
+        assert record.correlation_id == "N/A"  # type: ignore[attr-defined]
 
 
 class TestSetupLogging:
