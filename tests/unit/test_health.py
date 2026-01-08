@@ -60,8 +60,8 @@ class TestCheckDatabase:
         When: _check_database is called
         Then: Returns status 'error' with error message
         """
-        # Mock time progression
-        mock_time.side_effect = [0.0, 3.0]  # 3000ms elapsed
+        # Mock time progression - add extra values for logging's time.time() calls
+        mock_time.side_effect = [0.0, 3.0, 3.0, 3.0]  # Extra values for logging
 
         # Mock database connection error
         mock_session.execute.side_effect = Exception("Connection refused")
