@@ -14,6 +14,8 @@ probes and monitoring systems. These endpoints do not require authentication
 and must be available at the root path (no version prefix).
 """
 
+from __future__ import annotations
+
 import os
 import time
 from datetime import UTC, datetime
