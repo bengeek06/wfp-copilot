@@ -61,6 +61,10 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
     migrate.init_app(app, db)
     ma.init_app(app)
 
+    # Import models for migrations autogenerate
+    with app.app_context():
+        from app.models import Dummy  # noqa: F401
+
     # Configure rate limiting
     if app.config.get("RATE_LIMIT_ENABLED"):
         limiter.init_app(app)
