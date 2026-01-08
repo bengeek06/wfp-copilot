@@ -59,7 +59,10 @@ class Dummy(UUIDMixin, TimestampMixin, Model):
 
     # Required Fields
     name: Mapped[str] = mapped_column(
-        String(255), nullable=False, doc="Unique name within company"
+        String(255),
+        nullable=False,
+        index=True,
+        doc="Unique name within company",
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
