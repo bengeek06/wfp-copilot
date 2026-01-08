@@ -14,10 +14,11 @@ Flask application instances with proper configuration and extension
 initialization.
 """
 
+import re
 from contextlib import suppress
-from typing import Optional
+from typing import Any, Optional
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -68,18 +69,57 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
     # Configure rate limiting
     if app.config.get("RATE_LIMIT_ENABLED"):
         limiter.init_app(app)
+        # Rate limit for metrics endpoint (10 per minute)
+        limiter.limit("10 per minute")(lambda: None)
 
     # Configure Prometheus metrics
     if app.config.get("PROMETHEUS_METRICS_ENABLED"):
         global metrics
         metrics = PrometheusMetrics(app)
+
+        # Exclude health endpoints from metrics to reduce noise
+        # Use compiled regex patterns
+        metrics.excluded_paths = [
+            re.compile(r"^/health$"),
+            re.compile(r"^/ready$"),
+            re.compile(r"^/version$"),
+        ]
+
+        # Add service name label from environment
         # Don't register app_info gauge if already exists (for tests)
         with suppress(ValueError):
             metrics.info(
                 "app_info",
                 "Application info",
                 version=app.config.get("SERVICE_VERSION", "1.0.0"),
+                service_name=app.config.get("SERVICE_NAME", "wfp-flask-template"),
             )
+
+        # Protect /metrics endpoint with API key authentication
+        @app.before_request
+        def authenticate_metrics() -> tuple[dict[str, Any], int] | None:
+            """Authenticate requests to /metrics endpoint.
+
+            Returns:
+                Error response tuple if authentication fails, None otherwise.
+            """
+            if request.path != "/metrics":
+                return None
+
+            from app.utils.metrics_auth import require_metrics_api_key
+
+            # Create dummy function to decorate
+            @require_metrics_api_key
+            def _check_auth() -> tuple[dict[str, Any], int]:
+                return ({}, 200)
+
+            result: tuple[dict[str, Any], int] | Any = _check_auth()
+
+            # If not successful (200), return error response
+            if isinstance(result, tuple) and result[1] != 200:
+                return result
+
+            return None
 
     # Configure CORS
     if app.config.get("CORS_ORIGINS"):

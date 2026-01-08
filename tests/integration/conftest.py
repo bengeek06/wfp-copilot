@@ -42,6 +42,10 @@ def app() -> Generator[Flask, None, None]:
 
     app = create_app("app.config.IntegrationConfig")
 
+    # Set test METRICS_API_KEY for integration tests
+    app.config["METRICS_API_KEY"] = "test-metrics-api-key-integration-12345678"
+    app.config["PROMETHEUS_METRICS_ENABLED"] = True
+
     with app.app_context():
         # Create all tables
         db.create_all()
