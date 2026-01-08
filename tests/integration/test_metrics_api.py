@@ -263,17 +263,14 @@ class TestMetricsEndpoint:
 
         metrics_text = response.data.decode("utf-8")
 
-        # Check for histogram bucket labels
-        assert (
-            'le="0.005"' in metrics_text
-            or "flask_http_request_duration_seconds" in metrics_text
-        )
-        # Histogram should have _bucket, _count, and _sum metrics
-        assert (
-            "flask_http_request_duration_seconds_bucket" in metrics_text
-            or "flask_http_request_duration_seconds_count" in metrics_text
-            or "flask_http_request_duration_seconds_sum" in metrics_text
-        )
+        # Check that histogram metric exists and has at least one bucket label
+        assert "flask_http_request_duration_seconds" in metrics_text
+        assert 'le="0.005"' in metrics_text or 'le="0.01"' in metrics_text
+
+        # Histogram must have all three required components
+        assert "flask_http_request_duration_seconds_bucket" in metrics_text
+        assert "flask_http_request_duration_seconds_count" in metrics_text
+        assert "flask_http_request_duration_seconds_sum" in metrics_text
 
     def test_metrics_no_sensitive_data(
         self, client: FlaskClient, metrics_api_key: str
