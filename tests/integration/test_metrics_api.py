@@ -16,6 +16,7 @@ database, and Prometheus metrics collection.
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -159,6 +160,7 @@ class TestMetricsEndpoint:
         When: GET /metrics is called
         Then: Response status is 401
         And: Response is JSON with error message
+        And: Response includes valid ISO 8601 timestamp with timezone
         """
         response = client.get("/metrics")
 
@@ -166,7 +168,12 @@ class TestMetricsEndpoint:
         assert response.content_type == "application/json"
         data = response.get_json()
         assert data["message"] == "Missing Authorization header"
+        
+        # Verify timestamp is present and valid ISO 8601 format with timezone
         assert "timestamp" in data
+        timestamp = data["timestamp"]
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        assert parsed.tzinfo is not None
 
     def test_metrics_with_invalid_authorization_format(
         self, client: FlaskClient
