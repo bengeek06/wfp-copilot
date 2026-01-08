@@ -15,6 +15,7 @@ database connections and full application stack.
 
 import os
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from flask import Flask
@@ -34,6 +35,11 @@ def app() -> Generator[Flask, None, None]:
         Flask application configured for integration tests.
     """
     os.environ["TESTING"] = "true"
+
+    # Ensure instance directory exists for SQLite
+    instance_dir = Path(__file__).parent.parent.parent / "instance" / "data"
+    instance_dir.mkdir(parents=True, exist_ok=True)
+
     app = create_app("app.config.IntegrationConfig")
 
     with app.app_context():
