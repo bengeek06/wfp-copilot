@@ -135,12 +135,13 @@ class TestMetricsEndpoint:
     def test_metrics_contains_http_request_metrics(
         self, app: Flask, client: FlaskClient, metrics_api_key: str
     ) -> None:
-        """Test metrics contain HTTP request metrics (AC-004).
+        """Test metrics contain HTTP request metrics (AC-004, AC-007).
 
         Given: Application has received HTTP requests
         When: GET /metrics is called with valid key
         Then: Response contains flask_http_request_total counter
         And: Response contains flask_http_request_duration_seconds histogram
+        And: Health endpoints (/health, /ready, /version) are excluded (AC-007)
         """
         # Make some requests to generate metrics
         client.get("/health")
@@ -154,6 +155,12 @@ class TestMetricsEndpoint:
         assert response.status_code == 200
         text = response.get_data(as_text=True)
         assert "flask_http_request_total" in text
+
+        # AC-007: Verify health endpoints are excluded from metrics
+        # These paths should NOT appear in any flask_http_request_* metrics
+        assert 'path="/health"' not in text
+        assert 'path="/ready"' not in text
+        assert 'path="/version"' not in text
 
     def test_metrics_prometheus_format_validation(
         self, client: FlaskClient, metrics_api_key: str
@@ -179,7 +186,7 @@ class TestMetricsEndpoint:
         metric_lines = [
             line
             for line in lines
-            if line and not line.startswith("#") and "{" in line or " " in line
+            if line and not line.startswith("#") and ("{" in line or " " in line)
         ]
 
         assert len(help_lines) > 0, "Should have HELP comments"

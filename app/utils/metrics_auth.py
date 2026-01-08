@@ -15,6 +15,7 @@ used by Prometheus scraping. Validates Bearer token from Authorization header.
 
 from __future__ import annotations
 
+import hmac
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -118,8 +119,6 @@ def require_metrics_api_key() -> tuple[Response, int] | None:
 
     # Invalid API key (AC-003)
     # Use timing-safe comparison to prevent timing attacks
-    import hmac
-
     if not hmac.compare_digest(provided_key, expected_key):
         # Only log first 8 chars of invalid key
         key_prefix = _sanitize_for_log(provided_key[:8])

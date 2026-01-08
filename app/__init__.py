@@ -38,6 +38,10 @@ ma = Marshmallow()
 limiter = Limiter(key_func=get_remote_address)
 metrics: PrometheusMetrics | None = None  # Initialized in create_app
 
+# Module-level cache for SQLAlchemy pool metrics Gauges
+# Avoids accessing private REGISTRY._names_to_collectors
+_pool_metrics_cache: dict[str, Gauge] = {}
+
 
 def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
     """Create and configure Flask application instance.
@@ -92,69 +96,66 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
             )
 
         # Instrument SQLAlchemy connection pool metrics (AC-006, REQ-005)
-        # Wrap in try/except to avoid duplicate registration in tests
-        try:
-            sqlalchemy_pool_size = Gauge(
-                "sqlalchemy_pool_size",
-                "Current size of the connection pool",
-                ["pool_name"],
-            )
-            sqlalchemy_pool_checked_in = Gauge(
-                "sqlalchemy_pool_checked_in_connections",
-                "Number of connections currently checked in to the pool",
-                ["pool_name"],
-            )
-            sqlalchemy_pool_checked_out = Gauge(
-                "sqlalchemy_pool_checked_out_connections",
-                "Number of connections currently checked out of the pool",
-                ["pool_name"],
-            )
-            sqlalchemy_pool_overflow = Gauge(
-                "sqlalchemy_pool_overflow",
-                "Number of connections in overflow",
-                ["pool_name"],
-            )
-        except ValueError:
-            # Metrics already registered (happens when create_app called multiple times)
-            from prometheus_client import REGISTRY
-
-            sqlalchemy_pool_size = cast(
-                "Gauge", REGISTRY._names_to_collectors["sqlalchemy_pool_size"]
-            )
-            sqlalchemy_pool_checked_in = cast(
-                "Gauge",
-                REGISTRY._names_to_collectors["sqlalchemy_pool_checked_in_connections"],
-            )
-            sqlalchemy_pool_checked_out = cast(
-                "Gauge",
-                REGISTRY._names_to_collectors[
-                    "sqlalchemy_pool_checked_out_connections"
-                ],
-            )
-            sqlalchemy_pool_overflow = cast(
-                "Gauge", REGISTRY._names_to_collectors["sqlalchemy_pool_overflow"]
-            )
+        # Use module-level cache to avoid private REGISTRY access
+        global _pool_metrics_cache
+        if not _pool_metrics_cache:
+            try:
+                _pool_metrics_cache["pool_size"] = Gauge(
+                    "sqlalchemy_pool_size",
+                    "Current size of the connection pool",
+                    ["pool_name"],
+                )
+                _pool_metrics_cache["checked_in"] = Gauge(
+                    "sqlalchemy_pool_checked_in_connections",
+                    "Number of connections currently checked in to the pool",
+                    ["pool_name"],
+                )
+                _pool_metrics_cache["checked_out"] = Gauge(
+                    "sqlalchemy_pool_checked_out_connections",
+                    "Number of connections currently checked out of the pool",
+                    ["pool_name"],
+                )
+                _pool_metrics_cache["overflow"] = Gauge(
+                    "sqlalchemy_pool_overflow",
+                    "Number of connections in overflow",
+                    ["pool_name"],
+                )
+            except ValueError:
+                # Metrics already registered - should not happen with cache, but defensive
+                pass
 
         @app.before_request
         def update_sqlalchemy_pool_metrics() -> None:
-            """Update SQLAlchemy pool metrics before each request."""
+            """Update SQLAlchemy pool metrics only when /metrics is called.
+
+            This reduces overhead on user-facing endpoints by only updating
+            pool metrics when they are actually being scraped.
+            """
+            # Only update metrics when /metrics endpoint is called
+            if request.path != "/metrics":
+                return
+
             from sqlalchemy.pool import QueuePool
 
-            if hasattr(db.engine, "pool"):
-                pool = db.engine.pool
-                pool_name = str(db.engine.url.database or "default")
-                # Only QueuePool has size(), checkedin(), checkedout(), overflow()
-                if isinstance(pool, QueuePool):
-                    sqlalchemy_pool_size.labels(pool_name=pool_name).set(pool.size())
-                    sqlalchemy_pool_checked_in.labels(pool_name=pool_name).set(
-                        pool.checkedin()
-                    )
-                    sqlalchemy_pool_checked_out.labels(pool_name=pool_name).set(
-                        pool.checkedout()
-                    )
-                    sqlalchemy_pool_overflow.labels(pool_name=pool_name).set(
-                        pool.overflow()
-                    )
+            if not _pool_metrics_cache or not hasattr(db.engine, "pool"):
+                return
+
+            pool = db.engine.pool
+            pool_name = str(db.engine.url.database or "default")
+            # Only QueuePool has size(), checkedin(), checkedout(), overflow()
+            if isinstance(pool, QueuePool):
+                _pool_metrics_cache["pool_size"].labels(pool_name=pool_name).set(
+                    pool.size()
+                )
+                _pool_metrics_cache["checked_in"].labels(pool_name=pool_name).set(
+                    pool.checkedin()
+                )
+                _pool_metrics_cache["checked_out"].labels(pool_name=pool_name).set(
+                    pool.checkedout()
+                )
+                _pool_metrics_cache["overflow"].labels(pool_name=pool_name).set(
+                    pool.overflow()
+                )
 
         # Define authentication functions outside the request handler for efficiency
         from app.utils.metrics_auth import require_metrics_api_key
