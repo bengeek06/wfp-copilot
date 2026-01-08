@@ -106,4 +106,9 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
 
     setup_logging(app)
 
+    # Register CLI commands
+    from app.cli import config
+
+    app.cli.add_command(config)
+
     return app
