@@ -123,10 +123,11 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
                 return None
 
             # Apply rate limiting if enabled
+            result: tuple[dict[str, Any], int]
             if app.config.get("RATE_LIMIT_ENABLED"):
-                result: tuple[dict[str, Any], int] | Any = _check_auth_with_rate_limit()
+                result = _check_auth_with_rate_limit()
             else:
-                result: tuple[dict[str, Any], int] | Any = _check_auth_only()
+                result = _check_auth_only()
 
             # If not successful (200), return error response
             if isinstance(result, tuple) and result[1] != 200:
