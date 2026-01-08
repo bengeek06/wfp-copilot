@@ -27,6 +27,11 @@ from flask.testing import FlaskClient
 
 from app import create_app
 
+# === Constants ===
+
+# Mock patch targets
+GUARDIAN_CHECK_ACCESS_PATH = "app.services.guardian.GuardianService.check_access"
+
 # === Application & Database ===
 
 
@@ -337,7 +342,7 @@ def mock_guardian_granted() -> Generator[Mock, None, None]:
     Yields:
         Mock GuardianService.check_access that returns granted.
     """
-    with patch("app.services.guardian.GuardianService.check_access") as mock:
+    with patch(GUARDIAN_CHECK_ACCESS_PATH) as mock:
         mock.return_value = {"access_granted": True, "reason": "granted"}
         yield mock
 
@@ -349,7 +354,7 @@ def mock_guardian_denied() -> Generator[Mock, None, None]:
     Yields:
         Mock GuardianService.check_access that returns denied.
     """
-    with patch("app.services.guardian.GuardianService.check_access") as mock:
+    with patch(GUARDIAN_CHECK_ACCESS_PATH) as mock:
         mock.return_value = {"access_granted": False, "reason": "no_permission"}
         yield mock
 
@@ -361,7 +366,7 @@ def mock_guardian_error() -> Generator[Mock, None, None]:
     Yields:
         Mock GuardianService.check_access that raises exception.
     """
-    with patch("app.services.guardian.GuardianService.check_access") as mock:
+    with patch(GUARDIAN_CHECK_ACCESS_PATH) as mock:
         mock.side_effect = Exception("Guardian service unavailable")
         yield mock
 
@@ -379,7 +384,7 @@ def mock_guardian_custom() -> Callable:
     """
 
     def _mock(access_granted: bool = True, reason: str = "granted") -> Mock:
-        patcher = patch("app.services.guardian.GuardianService.check_access")
+        patcher = patch(GUARDIAN_CHECK_ACCESS_PATH)
         mock = patcher.start()
         mock.return_value = {"access_granted": access_granted, "reason": reason}
         return mock
