@@ -13,6 +13,7 @@ Provides SQLAlchemy database instance, custom types, and mixins for models.
 """
 
 from app.models.db import db
+from app.models.dummy import Dummy
 from app.models.types import GUID, JSONB, TimestampMixin, UUIDMixin
 
-__all__ = ["db", "GUID", "JSONB", "UUIDMixin", "TimestampMixin"]
+__all__ = ["db", "Dummy", "GUID", "JSONB", "UUIDMixin", "TimestampMixin"]

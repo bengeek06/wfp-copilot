@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import JSONB as PostgreSQLJSONB  # noqa: N81
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID  # noqa: N811
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.db import db
+from app import db
 
 
 class GUID(TypeDecorator):
