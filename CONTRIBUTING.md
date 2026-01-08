@@ -187,16 +187,16 @@ from typing import Optional
 
 def get_user_by_id(user_id: int) -> Optional[dict[str, Any]]:
     """Retrieve a user by their unique identifier.
-    
+
     Args:
         user_id: Unique identifier of the user.
-        
+
     Returns:
         User dictionary if found, None otherwise.
-        
+
     Raises:
         DatabaseError: If database connection fails.
-        
+
     Examples:
         >>> user = get_user_by_id(1)
         >>> print(user["email"])
@@ -292,16 +292,16 @@ from flask.testing import FlaskClient
 
 class TestUserListResource:
     """Tests for UserListResource."""
-    
+
     def test_get_users_success(self, client: FlaskClient) -> None:
         """Test retrieving user list.
-        
+
         Given: Users exist in database
         When: GET /users is called
         Then: Status is 200 and data is correct
         """
         response = client.get("/users")
-        
+
         assert response.status_code == 200
         assert "users" in response.json
         assert isinstance(response.json["users"], list)

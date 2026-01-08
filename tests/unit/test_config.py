@@ -359,8 +359,8 @@ class TestProductionConfig:
         When: Creating ProductionConfig instance
         Then: ValueError is raised
         """
-        os.environ["SECRET_KEY"] = "dev-secret-change-in-production"
-        os.environ["JWT_SECRET_KEY"] = "prod-jwt-secret"
+        os.environ["SECRET_KEY"] = "dev-secret-change-in-production"  # nosec B105
+        os.environ["JWT_SECRET_KEY"] = "prod-jwt-secret"  # nosec B105
         os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost/db"
         os.environ["GUARDIAN_SERVICE_URL"] = "http://guardian:5001"
         os.environ["GUARDIAN_SERVICE_API_KEY"] = "guardian-key"
@@ -391,8 +391,8 @@ class TestProductionConfig:
         When: Creating ProductionConfig instance
         Then: ValueError is raised
         """
-        os.environ["SECRET_KEY"] = "prod-secret-key"
-        os.environ["JWT_SECRET_KEY"] = "jwt-secret-change-in-production"
+        os.environ["SECRET_KEY"] = "prod-secret-key"  # nosec B105
+        os.environ["JWT_SECRET_KEY"] = "jwt-secret-change-in-production"  # nosec B105
         os.environ["DATABASE_URL"] = "postgresql://user:pass@localhost/db"
         os.environ["GUARDIAN_SERVICE_URL"] = "http://guardian:5001"
         os.environ["GUARDIAN_SERVICE_API_KEY"] = "guardian-key"

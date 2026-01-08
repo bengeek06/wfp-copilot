@@ -74,11 +74,11 @@ def _format_value(key: str, value: Any) -> str:
 
     # Format boolean values
     if isinstance(value, bool):
-        return click.style(str(value), fg="green" if value else "red")
+        return str(click.style(str(value), fg="green" if value else "red"))
 
     # Format None values
     if value is None:
-        return click.style("<not set>", fg="yellow")
+        return str(click.style("<not set>", fg="yellow"))
 
     # Format list/tuple values
     if isinstance(value, (list, tuple)):
@@ -217,12 +217,12 @@ def validate_config() -> None:
     if not current_app.config.get("TESTING"):
         # SECRET_KEY validation
         secret_key = current_app.config.get("SECRET_KEY")
-        if not secret_key or secret_key == "dev-secret-key-change-in-production":
+        if not secret_key or secret_key == "dev-secret-key-change-in-production":  # nosec B105
             errors.append("SECRET_KEY is using default value (SECURITY RISK)")
 
         # JWT_SECRET_KEY validation
         jwt_secret = current_app.config.get("JWT_SECRET_KEY")
-        if not jwt_secret or jwt_secret == "dev-jwt-secret-change-in-production":
+        if not jwt_secret or jwt_secret == "dev-jwt-secret-change-in-production":  # nosec B105
             errors.append("JWT_SECRET_KEY is using default value (SECURITY RISK)")
 
         # Database validation

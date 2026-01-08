@@ -267,7 +267,9 @@ class TestRunEntryPoint:
 
                 # Verify app.run was called with correct parameters
                 mock_app.run.assert_called_once_with(
-                    host="0.0.0.0", port=5555, debug=True
+                    host="0.0.0.0",  # nosec B104
+                    port=5555,
+                    debug=True,
                 )
 
     def test_main_uses_config_debug_setting(self) -> None:

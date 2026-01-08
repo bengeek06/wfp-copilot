@@ -272,10 +272,10 @@ class ProductionConfig(Config):
         secret_key = os.environ.get("SECRET_KEY", "")
         jwt_secret_key = os.environ.get("JWT_SECRET_KEY", "")
 
-        if secret_key == "dev-secret-change-in-production":
+        if secret_key == "dev-secret-change-in-production":  # nosec B105
             raise ValueError("SECRET_KEY must be changed in production")
 
-        if jwt_secret_key == "jwt-secret-change-in-production":
+        if jwt_secret_key == "jwt-secret-change-in-production":  # nosec B105
             raise ValueError("JWT_SECRET_KEY must be changed in production")
 
         super().__init__()
