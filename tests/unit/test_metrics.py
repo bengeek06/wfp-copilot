@@ -15,6 +15,7 @@ without actually calling the Flask application or metrics endpoint.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -25,16 +26,16 @@ from app.utils.metrics_auth import require_metrics_api_key
 
 
 @pytest.fixture
-def app() -> Flask:
+def app() -> Generator[Flask, None, None]:
     """Create Flask test app with METRICS_API_KEY configured.
 
-    Returns:
+    Yields:
         Configured Flask test application.
     """
     test_app = Flask(__name__)
     test_app.config["TESTING"] = True
     test_app.config["METRICS_API_KEY"] = "test-api-key-12345678901234567890"
-    return test_app
+    yield test_app
 
 
 @pytest.fixture
