@@ -91,7 +91,10 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
         if not auth_header:
             logger.warning(
                 "Metrics access attempt without Authorization header",
-                extra={"ip": request.remote_addr, "path": request.path},
+                extra={
+                    "ip": _sanitize_for_log(request.remote_addr),
+                    "path": _sanitize_for_log(request.path),
+                },
             )
             return (
                 {
