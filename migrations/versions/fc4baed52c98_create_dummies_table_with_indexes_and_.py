@@ -1,14 +1,14 @@
 """Create dummies table with indexes and constraints
 
 Revision ID: fc4baed52c98
-Revises: 
+Revises:
 Create Date: 2026-01-08 20:03:41.876428
 
 """
-from alembic import op
 import sqlalchemy as sa
-from app.models.types import GUID
+from alembic import op
 
+from app.models.types import GUID
 
 # revision identifiers, used by Alembic.
 revision = 'fc4baed52c98'

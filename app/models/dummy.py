@@ -15,16 +15,22 @@ all standard CRUD patterns.
 """
 
 import uuid
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app import db
 from app.models.types import GUID, TimestampMixin, UUIDMixin
 
+if TYPE_CHECKING:
+    from flask_sqlalchemy.model import Model
+else:
+    from app import db
 
-class Dummy(UUIDMixin, TimestampMixin, db.Model):
+    Model = db.Model
+
+
+class Dummy(UUIDMixin, TimestampMixin, Model):
     """Dummy resource model.
 
     Represents an example resource for demonstrating CRUD operations,
@@ -64,7 +70,7 @@ class Dummy(UUIDMixin, TimestampMixin, db.Model):
     )
 
     # Optional Fields
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text, nullable=True, doc="Optional description (max 1000 chars)"
     )
 
