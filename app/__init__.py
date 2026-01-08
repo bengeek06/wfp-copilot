@@ -69,8 +69,6 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
     # Configure rate limiting
     if app.config.get("RATE_LIMIT_ENABLED"):
         limiter.init_app(app)
-        # Rate limit for metrics endpoint (10 per minute)
-        limiter.limit("10 per minute")(lambda: None)
 
     # Configure Prometheus metrics
     if app.config.get("PROMETHEUS_METRICS_ENABLED"):
@@ -96,25 +94,38 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
                 service_name=app.config.get("SERVICE_NAME", "wfp-flask-template"),
             )
 
-        # Protect /metrics endpoint with API key authentication
+        # Protect /metrics endpoint with API key authentication and rate limiting
         @app.before_request
         def authenticate_metrics() -> tuple[dict[str, Any], int] | None:
-            """Authenticate requests to /metrics endpoint.
+            """Authenticate requests to /metrics endpoint with rate limiting.
+
+            Applies rate limiting (10 requests per minute) and API key authentication
+            to the /metrics endpoint.
 
             Returns:
-                Error response tuple if authentication fails, None otherwise.
+                Error response tuple if authentication or rate limit fails, None otherwise.
             """
             if request.path != "/metrics":
                 return None
 
             from app.utils.metrics_auth import require_metrics_api_key
 
-            # Create dummy function to decorate
-            @require_metrics_api_key
-            def _check_auth() -> tuple[dict[str, Any], int]:
-                return ({}, 200)
+            # Apply rate limiting if enabled
+            if app.config.get("RATE_LIMIT_ENABLED"):
+                # Create a rate-limited function for metrics endpoint
+                @limiter.limit("10 per minute")
+                @require_metrics_api_key
+                def _check_auth_with_rate_limit() -> tuple[dict[str, Any], int]:
+                    return ({}, 200)
 
-            result: tuple[dict[str, Any], int] | Any = _check_auth()
+                result: tuple[dict[str, Any], int] | Any = _check_auth_with_rate_limit()
+            else:
+                # Only apply authentication without rate limiting
+                @require_metrics_api_key
+                def _check_auth() -> tuple[dict[str, Any], int]:
+                    return ({}, 200)
+
+                result: tuple[dict[str, Any], int] | Any = _check_auth()
 
             # If not successful (200), return error response
             if isinstance(result, tuple) and result[1] != 200:
