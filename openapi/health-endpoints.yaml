@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: Health, Readiness and Version Endpoints
   description: |
-    Standardized observability endpoints for Kubernetes health probes, monitoring, 
-    and version tracking. These endpoints are public (no authentication required) and 
+    Standardized observability endpoints for Kubernetes health probes, monitoring,
+    and version tracking. These endpoints are public (no authentication required) and
     must be present in all Waterfall microservices.
   version: 1.0.0
   contact:
@@ -11,7 +11,7 @@ info:
   license:
     name: AGPLv3 or Commercial (dual licensing)
     url: https://www.gnu.org/licenses/agpl-3.0.en.html
-    
+
 servers:
   - url: http://localhost:5000
     description: Development server
@@ -35,8 +35,8 @@ paths:
         - Health
       summary: Liveness probe
       description: |
-        Checks if the application is alive and functioning. Used by Kubernetes 
-        liveness probes to detect if the container needs restart. Returns 200 OK 
+        Checks if the application is alive and functioning. Used by Kubernetes
+        liveness probes to detect if the container needs restart. Returns 200 OK
         even if dependencies are degraded (only fails if app itself is broken).
       operationId: getHealth
       responses:
@@ -96,15 +96,15 @@ paths:
                 status: error
                 timestamp: "2026-01-07T10:30:00Z"
                 error: "Application initialization failed"
-                
+
   /ready:
     get:
       tags:
         - Health
       summary: Readiness probe
       description: |
-        Checks if the application is ready to accept traffic. Used by Kubernetes 
-        readiness probes to control load balancer routing. Returns 503 if any 
+        Checks if the application is ready to accept traffic. Used by Kubernetes
+        readiness probes to control load balancer routing. Returns 503 if any
         critical dependency is unavailable.
       operationId: getReadiness
       responses:
@@ -169,7 +169,7 @@ paths:
         - Version
       summary: Get service version
       description: |
-        Returns the service version, commit hash, and build information. 
+        Returns the service version, commit hash, and build information.
         Version is read from VERSION file at repository root.
       operationId: getVersion
       responses:
@@ -250,7 +250,7 @@ components:
               $ref: '#/components/schemas/CheckResult'
           additionalProperties:
             $ref: '#/components/schemas/CheckResult'
-            
+
     HealthDegraded:
       type: object
       required:
@@ -274,7 +274,7 @@ components:
             oneOf:
               - $ref: '#/components/schemas/CheckResult'
               - $ref: '#/components/schemas/CheckResultError'
-              
+
     HealthError:
       type: object
       required:
@@ -291,7 +291,7 @@ components:
         error:
           type: string
           description: Error message describing what failed
-          
+
     ReadinessOk:
       type: object
       required:
@@ -319,7 +319,7 @@ components:
               $ref: '#/components/schemas/CheckResult'
           additionalProperties:
             $ref: '#/components/schemas/CheckResult'
-            
+
     ReadinessNotReady:
       type: object
       required:
@@ -352,7 +352,7 @@ components:
             oneOf:
               - $ref: '#/components/schemas/CheckResult'
               - $ref: '#/components/schemas/CheckResultError'
-              
+
     CheckResult:
       type: object
       required:
@@ -366,7 +366,7 @@ components:
           type: integer
           minimum: 0
           description: Check execution time in milliseconds
-          
+
     CheckResultError:
       type: object
       required:
@@ -382,7 +382,7 @@ components:
         error:
           type: string
           description: Error message describing the failure
-          
+
     Version:
       type: object
       required:
@@ -405,7 +405,7 @@ components:
           type: string
           enum: [development, testing, staging, production]
           description: Deployment environment
-          
+
     VersionError:
       type: object
       required:

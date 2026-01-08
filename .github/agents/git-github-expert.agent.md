@@ -387,7 +387,7 @@ Please pay special attention to:
 
 ### PR Size Guidelines
 
-**Small PR** (Preferred): 
+**Small PR** (Preferred):
 - Max 200-300 lines changed
 - Single, focused change
 - Easy to review thoroughly
@@ -503,23 +503,23 @@ Use GitHub labels consistently:
 **Be Constructive**
 ```
 ❌ Bad: "This is wrong"
-✅ Good: "Consider using a dictionary here for O(1) lookup instead of 
-         iterating through the list. This would improve performance 
+✅ Good: "Consider using a dictionary here for O(1) lookup instead of
+         iterating through the list. This would improve performance
          from O(n) to O(1)."
 ```
 
 **Be Specific**
 ```
 ❌ Bad: "Improve error handling"
-✅ Good: "Add a try-except block here to catch SQLAlchemy 
+✅ Good: "Add a try-except block here to catch SQLAlchemy
          IntegrityError and return a proper 409 Conflict response."
 ```
 
 **Suggest Solutions**
 ```
-✅ "Consider extracting this logic into a separate service method 
+✅ "Consider extracting this logic into a separate service method
     to improve testability and reusability. For example:
-    
+
     def _validate_business_hours(self, time: datetime) -> bool:
         # validation logic here
 "
@@ -527,10 +527,10 @@ Use GitHub labels consistently:
 
 **Acknowledge Good Work**
 ```
-✅ "Nice use of the repository pattern here! This makes the code 
+✅ "Nice use of the repository pattern here! This makes the code
     much more maintainable."
 
-✅ "Great test coverage on the edge cases. I especially like the 
+✅ "Great test coverage on the edge cases. I especially like the
     parametrized tests for different email formats."
 ```
 
@@ -552,15 +552,15 @@ Use these prefixes in comments:
 
 Examples:
 ```
-[BLOCKING] This endpoint is missing authentication. All user data 
+[BLOCKING] This endpoint is missing authentication. All user data
 endpoints must require authentication.
 
-[SUGGESTION] Consider using a dataclass here instead of a dictionary 
+[SUGGESTION] Consider using a dataclass here instead of a dictionary
 for better type safety.
 
 [QUESTION] Why did we choose Redis over database caching here?
 
-[NITPICK] Line 45 could use better variable naming (e.g., 
+[NITPICK] Line 45 could use better variable naming (e.g.,
 `user_count` instead of `cnt`).
 
 [PRAISE] Excellent error handling throughout this module!

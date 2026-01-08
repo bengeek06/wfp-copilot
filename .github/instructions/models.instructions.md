@@ -34,10 +34,10 @@ from .. import db
 
 class User(db.Model):
     """User account model.
-    
+
     Represents a user account in the system with authentication
     and profile information.
-    
+
     Attributes:
         id: Unique identifier (primary key).
         email: User email address (unique, indexed).
@@ -46,12 +46,12 @@ class User(db.Model):
         created_at: Timestamp of account creation.
         updated_at: Timestamp of last update.
     """
-    
+
     __tablename__ = "users"
-    
+
     # Primary Key
     id: Mapped[int] = mapped_column(primary_key=True)
-    
+
     # Required Fields
     email: Mapped[str] = mapped_column(
         String(255),
@@ -60,10 +60,10 @@ class User(db.Model):
         index=True
     )
     username: Mapped[str] = mapped_column(String(100), nullable=False)
-    
+
     # Optional Fields
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -76,17 +76,17 @@ class User(db.Model):
         onupdate=datetime.utcnow,
         nullable=False
     )
-    
+
     # Relationships
     orders: Mapped[list["Order"]] = relationship(
         "Order",
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
+
     def __repr__(self) -> str:
         """String representation of User.
-        
+
         Returns:
             Human-readable string with key attributes.
         """
@@ -147,7 +147,7 @@ Always implement for debugging:
 ```python
 def __repr__(self) -> str:
     """String representation of ModelName.
-    
+
     Returns:
         Human-readable string with key attributes.
     """
@@ -254,7 +254,7 @@ Add validation as instance methods, not in the model:
 ```python
 def validate_email(self) -> bool:
     """Validate email format.
-    
+
     Returns:
         True if email is valid, False otherwise.
     """
@@ -293,10 +293,10 @@ from src.api.models.user import User
 
 class TestUserModel:
     """Tests for User model."""
-    
+
     def test_user_creation(self, db_session):
         """Test creating a user instance.
-        
+
         Given: Valid user data
         When: User is created
         Then: User has correct attributes
@@ -304,15 +304,15 @@ class TestUserModel:
         user = User(email="test@example.com", username="testuser")
         db_session.add(user)
         db_session.commit()
-        
+
         assert user.id is not None
         assert user.email == "test@example.com"
         assert user.is_active is True
         assert user.created_at is not None
-    
+
     def test_user_repr(self):
         """Test user string representation.
-        
+
         Given: A user instance
         When: repr() is called
         Then: Returns formatted string
@@ -353,7 +353,7 @@ from .. import db
 
 class OrderStatus(PyEnum):
     """Order status enumeration.
-    
+
     Defines possible states for an order lifecycle.
     """
     PENDING = "pending"
@@ -365,10 +365,10 @@ class OrderStatus(PyEnum):
 
 class Order(db.Model):
     """Order model representing customer purchase orders.
-    
+
     Manages order information including status, pricing, and
     relationships to users and order items.
-    
+
     Attributes:
         id: Unique order identifier.
         order_number: Human-readable order number (unique).
@@ -381,12 +381,12 @@ class Order(db.Model):
         user: Relationship to User model.
         items: Relationship to OrderItem models.
     """
-    
+
     __tablename__ = "orders"
-    
+
     # Primary Key
     id: Mapped[int] = mapped_column(primary_key=True)
-    
+
     # Business Fields
     order_number: Mapped[str] = mapped_column(
         String(50),
@@ -394,14 +394,14 @@ class Order(db.Model):
         nullable=False,
         index=True
     )
-    
+
     # Foreign Keys
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
-    
+
     # Status and Pricing
     status: Mapped[OrderStatus] = mapped_column(
         Enum(OrderStatus),
@@ -409,47 +409,47 @@ class Order(db.Model):
         nullable=False,
         index=True
     )
-    
+
     total_amount: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False
     )
-    
+
     # Optional Fields
     notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         nullable=False
     )
-    
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
         nullable=False
     )
-    
+
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="orders")
-    
+
     items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem",
         back_populates="order",
         cascade="all, delete-orphan",
         lazy="selectin"
     )
-    
+
     # Indexes
     __table_args__ = (
         Index("idx_order_user_status", "user_id", "status"),
     )
-    
+
     def __repr__(self) -> str:
         """String representation of Order.
-        
+
         Returns:
             Human-readable string with order details.
         """

@@ -1,0 +1,61 @@
+# Copyright (c) 2025 Waterfall
+#
+# This source code is dual-licensed under:
+# - GNU Affero General Public License v3.0 (AGPLv3) for open source use
+# - Commercial License for proprietary use
+#
+# See LICENSE and LICENSE.md files in the root directory for full license text.
+# For commercial licensing inquiries, contact: contact@waterfall-project.pro
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: postgres-test
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: testdb
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: redis-test
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # À activer quand wfp-guardian sera publié sur GHCR
+  # guardian-test:
+  #   image: ghcr.io/waterfall-project/wfp-guardian:latest
+  #   container_name: guardian-test
+  #   environment:
+  #     FLASK_ENV: production
+  #     DATABASE_TYPE: postgresql
+  #     DATABASE_URL: postgresql://testuser:testpassword@postgres-test:5432/testdb
+  #     REDIS_URL: redis://redis-test:6379/0
+  #     IDENTITY_SERVICE_URL: http://identity-test:5000
+  #   ports:
+  #     - "5002:5000"
+  #   depends_on:
+  #     postgres-test:
+  #       condition: service_healthy
+  #     redis-test:
+  #       condition: service_healthy
+  #     identity-test:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #     start_period: 30s

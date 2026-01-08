@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Prometheus Metrics Endpoint
   description: |
-    Exposes application, HTTP, and system metrics in Prometheus text exposition format 
+    Exposes application, HTTP, and system metrics in Prometheus text exposition format
     for scraping by Prometheus monitoring server. Requires API key authentication.
   version: 1.0.0
   contact:
@@ -33,10 +33,10 @@ paths:
         - Metrics
       summary: Get Prometheus metrics
       description: |
-        Exposes application metrics in Prometheus text exposition format. 
-        Requires API key authentication via Authorization header. Scraped by 
+        Exposes application metrics in Prometheus text exposition format.
+        Requires API key authentication via Authorization header. Scraped by
         Prometheus server at configured interval (typically 15-60 seconds).
-        
+
         **Metrics included:**
         - HTTP request count, duration histograms, status codes
         - System metrics (CPU, memory, threads)
@@ -120,8 +120,8 @@ components:
       description: |
         API key authentication via Authorization header.
         Format: Authorization: Bearer <METRICS_API_KEY>
-        
-        The API key is configured via the `METRICS_API_KEY` environment variable 
+
+        The API key is configured via the `METRICS_API_KEY` environment variable
         and must be at least 32 characters alphanumeric.
 
   headers:
@@ -156,7 +156,7 @@ components:
           type: string
           format: date-time
           description: ISO 8601 timestamp in UTC
-          
+
   examples:
     PrometheusMetrics:
       summary: Complete metrics response
@@ -165,21 +165,21 @@ components:
         # HELP python_info Python platform information
         # TYPE python_info gauge
         python_info{implementation="CPython",major="3",minor="11",patchlevel="7",version="3.11.7"} 1.0
-        
+
         # HELP flask_http_request_duration_seconds Flask HTTP request duration in seconds
         # TYPE flask_http_request_duration_seconds histogram
         flask_http_request_duration_seconds_bucket{le="0.005",method="GET",path="/v0/dummies",status="200"} 145.0
         flask_http_request_duration_seconds_count{method="GET",path="/v0/dummies",status="200"} 350.0
         flask_http_request_duration_seconds_sum{method="GET",path="/v0/dummies",status="200"} 8.75
-        
+
         # HELP flask_http_request_total Total number of HTTP requests
         # TYPE flask_http_request_total counter
         flask_http_request_total{method="GET",status="200"} 1234.0
-        
+
         # HELP process_virtual_memory_bytes Virtual memory size in bytes
         # TYPE process_virtual_memory_bytes gauge
         process_virtual_memory_bytes 234567890.0
-        
+
         # HELP sqlalchemy_pool_size Current size of the connection pool
         # TYPE sqlalchemy_pool_size gauge
         sqlalchemy_pool_size 5.0

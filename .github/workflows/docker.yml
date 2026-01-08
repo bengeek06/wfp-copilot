@@ -1,0 +1,289 @@
+name: Docker - Build & Publish
+
+on:
+  push:
+    branches: [ main, staging ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main, staging ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [development, test, production]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=-${{ matrix.stage }},onlatest=true
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.stage }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          load: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+        run: |
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "Testing image: $IMAGE_TAG"
+
+          # For test stage, run pytest directly
+          if [[ "${{ matrix.stage }}" == "test" ]]; then
+            echo "Running pytest in test container..."
+            docker run --rm \
+              -e DATABASE_URL=sqlite:///:memory: \
+              -e USE_IDENTITY_SERVICE=false \
+              -e USE_GUARDIAN_SERVICE=false \
+              $IMAGE_TAG
+            exit 0
+          fi
+
+          # For development and production stages, test the running server
+          # Start container
+          docker run -d --name test-app -p 5000:5000 \
+            -e FLASK_ENV=production \
+            -e DATABASE_TYPE=sqlite \
+            -e DATABASE_URL=sqlite:///tmp/test.db \
+            -e WAIT_FOR_DB=false \
+            -e RUN_MIGRATIONS=false \
+            -e JWT_ALGORITHM=HS256 \
+            -e JWT_SECRET_KEY=test-jwt-secret-for-workflow \
+            -e USE_IDENTITY_SERVICE=false \
+            -e USE_GUARDIAN_SERVICE=false \
+            $IMAGE_TAG
+
+          # Wait for app to be ready
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:5000/v0/health > /dev/null 2>&1; then
+              echo "✓ Application is responding"
+              break
+            fi
+            echo "  Waiting... (attempt $i/30)"
+            sleep 2
+            if [ $i -eq 30 ]; then
+              echo "❌ Application did not start in time"
+              docker logs test-app
+              exit 1
+            fi
+          done
+
+          # Test health endpoint
+          RESPONSE=$(curl -s http://localhost:5000/v0/health)
+          echo "Health check response: $RESPONSE"
+
+          # Stop container
+          docker stop test-app
+          docker rm test-app
+
+      - name: Build and push Docker image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.stage }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate SBOM
+        if: matrix.stage == 'production'
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          artifact-name: sbom-${{ matrix.stage }}.spdx.json
+          output-file: ./sbom-${{ matrix.stage }}.spdx.json
+
+      - name: Upload SBOM
+        if: matrix.stage == 'production'
+        uses: actions/upload-artifact@v6
+        with:
+          name: sbom-${{ matrix.stage }}
+          path: ./sbom-${{ matrix.stage }}.spdx.json
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        stage: [development, test, production]
+
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get image tag
+        id: image
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-${{ matrix.stage }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${BRANCH}-${{ matrix.stage }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pull Docker image
+        run: docker pull ${{ steps.image.outputs.tag }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image.outputs.tag }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.stage }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.stage }}.sarif'
+          category: 'trivy-${{ matrix.stage }}'
+
+      - name: Run Trivy vulnerability scanner (table format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image.outputs.tag }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+  image-size-check:
+    name: Check Image Size
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: production
+          push: false
+          load: true
+          tags: test-image:latest
+          build-args: |
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+          cache-from: type=gha
+
+      - name: Check image size
+        run: |
+          SIZE=$(docker images test-image:latest --format "{{.Size}}")
+          SIZE_MB=$(docker images test-image:latest --format "{{.Size}}" | sed 's/MB//' | sed 's/GB/*1024/')
+          echo "Image size: $SIZE"
+
+          # Alert if image is larger than 500MB
+          if [[ "$SIZE" == *GB* ]]; then
+            echo "⚠️  Image size exceeds 500MB: $SIZE"
+            echo "Consider optimizing the image"
+            exit 1
+          fi
+
+          echo "✅ Image size is acceptable: $SIZE"
+
+  summary:
+    name: Docker Summary
+    runs-on: ubuntu-latest
+    needs: [build, security-scan]
+    if: always() && github.event_name != 'pull_request'
+
+    steps:
+      - name: Check job results
+        run: |
+          echo "Build: ${{ needs.build.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+          # Security scan only runs on main, so skipped is acceptable on other branches
+          if [[ "${{ needs.security-scan.result }}" != "success" ]] && \
+             [[ "${{ needs.security-scan.result }}" != "skipped" ]]; then
+            echo "❌ Security scan failed"
+            exit 1
+          fi
+
+          echo "✅ All Docker checks passed"
+          echo "Images pushed to: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"

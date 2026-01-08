@@ -46,23 +46,23 @@ from ..models.${entityName}_model import ${entityName.capitalize()}
 
 class ${entityName.capitalize()}Schema(SQLAlchemyAutoSchema):
     """Base schema for ${entityName} serialization.
-    
+
     Used for serializing ${entityName} data in API responses.
     Includes all model fields and read-only metadata.
-    
+
     This schema should be used for:
     - GET /${entityNamePlural} (list response)
     - GET /${entityNamePlural}/<id> (single response)
     - Response bodies after CREATE/UPDATE/DELETE
     """
-    
+
     class Meta:
         """Schema metadata configuration."""
         model = ${entityName.capitalize()}
         load_instance = True
         include_fk = True
         include_relationships = False
-    
+
     # Override fields to control serialization
     id = fields.UUID(dump_only=True)
     created_at = fields.DateTime(dump_only=True, format="iso")
@@ -71,12 +71,12 @@ class ${entityName.capitalize()}Schema(SQLAlchemyAutoSchema):
 
 class ${entityName.capitalize()}CreateSchema(Schema):
     """Schema for creating a new ${entityName}.
-    
+
     Validates POST /${entityNamePlural} request body.
     Only includes fields that can be set during creation.
     All required business fields must be present.
     """
-    
+
     name = fields.Str(
         required=True,
         validate=validate.Length(min=1, max=255),
@@ -85,41 +85,41 @@ class ${entityName.capitalize()}CreateSchema(Schema):
             "invalid": "Name must be a valid string"
         }
     )
-    
+
     description = fields.Str(
         validate=validate.Length(max=1000),
         allow_none=True,
         load_default=None
     )
-    
+
     is_active = fields.Bool(
         load_default=True,
         error_messages={"invalid": "is_active must be a boolean"}
     )
-    
+
     @validates("name")
     def validate_name(self, value: str) -> None:
         """Validate name field.
-        
+
         Args:
             value: Name value to validate.
-            
+
         Raises:
             ValidationError: If name is invalid.
         """
         if not value.strip():
             raise ValidationError("Name cannot be empty or whitespace only")
-        
+
         if value != value.strip():
             raise ValidationError("Name cannot have leading or trailing whitespace")
-    
+
     @validates_schema
     def validate_schema(self, data: dict[str, Any], **kwargs: Any) -> None:
         """Validate complete schema data.
-        
+
         Args:
             data: Complete data dictionary after field validation.
-            
+
         Raises:
             ValidationError: If schema-level validation fails.
         """
@@ -129,36 +129,36 @@ class ${entityName.capitalize()}CreateSchema(Schema):
 
 class ${entityName.capitalize()}UpdateSchema(Schema):
     """Schema for partially updating a ${entityName}.
-    
+
     Validates PATCH /${entityNamePlural}/<id> request body.
     All fields are optional - only provided fields will be updated.
     Allows partial updates without requiring all fields.
     """
-    
+
     name = fields.Str(
         validate=validate.Length(min=1, max=255)
     )
-    
+
     description = fields.Str(
         validate=validate.Length(max=1000),
         allow_none=True
     )
-    
+
     is_active = fields.Bool()
-    
+
     @validates("name")
     def validate_name(self, value: str) -> None:
         """Validate name if provided."""
         if value is not None and not value.strip():
             raise ValidationError("Name cannot be empty or whitespace only")
-    
+
     @validates_schema
     def validate_at_least_one_field(self, data: dict[str, Any], **kwargs: Any) -> None:
         """Ensure at least one field is provided for update.
-        
+
         Args:
             data: Validated data dictionary.
-            
+
         Raises:
             ValidationError: If no fields provided.
         """
@@ -168,24 +168,24 @@ class ${entityName.capitalize()}UpdateSchema(Schema):
 
 class ${entityName.capitalize()}ReplaceSchema(Schema):
     """Schema for completely replacing a ${entityName}.
-    
+
     Validates PUT /${entityNamePlural}/<id> request body.
     All required business fields must be present.
     Replaces the entire entity (except id and timestamps).
     """
-    
+
     name = fields.Str(
         required=True,
         validate=validate.Length(min=1, max=255)
     )
-    
+
     description = fields.Str(
         validate=validate.Length(max=1000),
         allow_none=True
     )
-    
+
     is_active = fields.Bool(required=True)
-    
+
     @validates("name")
     def validate_name(self, value: str) -> None:
         """Validate name field."""
@@ -207,13 +207,13 @@ Use `SQLAlchemyAutoSchema` for automatic mapping:
 ```python
 class ${entityName.capitalize()}Schema(SQLAlchemyAutoSchema):
     """Base serialization schema."""
-    
+
     class Meta:
         model = ${entityName.capitalize()}
         load_instance = True  # Load as model instance
         include_fk = True     # Include foreign keys
         include_relationships = False  # Exclude by default
-    
+
     # Override auto-generated fields
     id = fields.UUID(dump_only=True)
     created_at = fields.DateTime(dump_only=True, format="iso")
@@ -274,10 +274,10 @@ code = fields.Str(validate=validate.Regexp(r'^[A-Z]{3}\d{3}$'))
 @validates("email")
 def validate_email(self, value: str) -> None:
     """Custom email validation.
-    
+
     Args:
         value: Email to validate.
-        
+
     Raises:
         ValidationError: If email is invalid.
     """
@@ -293,16 +293,16 @@ For cross-field validation:
 @validates_schema
 def validate_dates(self, data: dict[str, Any], **kwargs: Any) -> None:
     """Validate date relationships.
-    
+
     Args:
         data: Complete validated data.
-        
+
     Raises:
         ValidationError: If validation fails.
     """
     start_date = data.get("start_date")
     end_date = data.get("end_date")
-    
+
     if start_date and end_date and start_date > end_date:
         raise ValidationError(
             "start_date must be before end_date",

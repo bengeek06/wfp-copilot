@@ -99,16 +99,16 @@ paths:
 components:
   schemas:
     [Generated from request/response schemas]
-  
+
   responses:
     [Common error responses]
-  
+
   parameters:
     [Reusable parameters]
-  
+
   securitySchemes:
     [From SEC-xxx requirements]
-  
+
   headers:
     [Common headers like correlation-id, rate-limit]
 
@@ -133,7 +133,7 @@ paths:
       operationId: [methodVerbResourceName, e.g., getUserById]
       tags:
         - [Resource name]
-      
+
       parameters:
         # Path parameters
         - name: [param-name]
@@ -144,7 +144,7 @@ paths:
             type: [From table]
             format: [uuid, date-time, etc.]
           example: [From examples section]
-        
+
         # Query parameters (for GET)
         - name: page
           in: query
@@ -154,7 +154,7 @@ paths:
             type: integer
             minimum: 1
             default: 1
-        
+
         - name: per_page
           in: query
           description: Items per page
@@ -164,7 +164,7 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
-      
+
       requestBody:
         required: true
         content:
@@ -175,7 +175,7 @@ paths:
               default:
                 summary: Example request
                 value: [From examples section]
-      
+
       responses:
         '200':
           description: [From status code table]
@@ -194,7 +194,7 @@ paths:
                 default:
                   summary: Successful response
                   value: [From examples section]
-        
+
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -205,10 +205,10 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-      
+
       security:
         - bearerAuth: []
-      
+
       x-rate-limit:
         limit: [From rate limiting requirements]
         window: 60
@@ -260,7 +260,7 @@ components:
           description: Last update timestamp in ISO 8601 format
           readOnly: true
       example: [From examples section]
-    
+
     # Create schema (for POST)
     [ResourceName]Create:
       type: object
@@ -280,7 +280,7 @@ components:
           type: boolean
           default: true
       example: [From examples section]
-    
+
     # Update schema (for PATCH)
     [ResourceName]Update:
       type: object
@@ -297,7 +297,7 @@ components:
           type: boolean
       minProperties: 1
       example: [From examples section]
-    
+
     # Replace schema (for PUT)
     [ResourceName]Replace:
       type: object
@@ -316,7 +316,7 @@ components:
         is_active:
           type: boolean
       example: [From examples section]
-    
+
     # List response (for GET collection)
     [ResourceName]List:
       type: object
@@ -345,7 +345,7 @@ components:
           type: integer
           minimum: 0
       example: [From examples section]
-    
+
     # Wrapper for single resource response
     [ResourceName]Response:
       type: object
@@ -358,7 +358,7 @@ components:
           type: string
           description: Optional success message
       example: [From examples section]
-    
+
     # Error response schema
     Error:
       type: object
@@ -398,7 +398,7 @@ components:
             message: "Validation failed"
             errors:
               name: ["Name cannot be empty"]
-    
+
     Unauthorized:
       description: Authentication required or invalid token
       content:
@@ -407,7 +407,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "Invalid or expired token"
-    
+
     Forbidden:
       description: Insufficient permissions
       content:
@@ -416,7 +416,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "Insufficient permissions for this operation"
-    
+
     NotFound:
       description: Resource not found
       content:
@@ -425,7 +425,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "Resource not found"
-    
+
     Conflict:
       description: Resource already exists or constraint violation
       content:
@@ -434,7 +434,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "Resource already exists"
-    
+
     TooManyRequests:
       description: Rate limit exceeded
       headers:
@@ -448,7 +448,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "Rate limit exceeded"
-    
+
     InternalServerError:
       description: Internal server error
       content:
@@ -457,7 +457,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: "An unexpected error occurred"
-  
+
   parameters:
     PageParam:
       name: page
@@ -468,7 +468,7 @@ components:
         type: integer
         minimum: 1
         default: 1
-    
+
     PerPageParam:
       name: per_page
       in: query
@@ -479,7 +479,7 @@ components:
         minimum: 1
         maximum: 100
         default: 20
-    
+
     SearchParam:
       name: search
       in: query
@@ -487,7 +487,7 @@ components:
       required: false
       schema:
         type: string
-    
+
     SortByParam:
       name: sort_by
       in: query
@@ -496,7 +496,7 @@ components:
       schema:
         type: string
         default: created_at
-    
+
     SortOrderParam:
       name: sort_order
       in: query
@@ -506,29 +506,29 @@ components:
         type: string
         enum: [asc, desc]
         default: desc
-  
+
   headers:
     X-Correlation-ID:
       description: Correlation ID for request tracing
       schema:
         type: string
         format: uuid
-    
+
     X-RateLimit-Limit:
       description: Maximum requests allowed in window
       schema:
         type: integer
-    
+
     X-RateLimit-Remaining:
       description: Remaining requests in current window
       schema:
         type: integer
-    
+
     X-RateLimit-Reset:
       description: Unix timestamp when rate limit resets
       schema:
         type: integer
-  
+
   securitySchemes:
     bearerAuth:
       type: http

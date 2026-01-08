@@ -13,7 +13,7 @@ graph TD
     E -->|code complet| F[Phase 6: Code Review]
     F -->|code validé| G[Phase 7: Pull Request]
     G -->|PR créée| H[Merge & Deploy]
-    
+
     style A fill:#e1f5fe
     style B fill:#fff9c4
     style C fill:#e8eaf6
@@ -125,7 +125,7 @@ graph TD
    redoc-cli bundle openapi/spec.yaml -o docs/api.html
    ```
 
-**Résultat** : 
+**Résultat** :
 - `openapi/spec.yaml` : Spécification OpenAPI valide
 - `docs/api.html` : Documentation interactive
 
@@ -203,7 +203,7 @@ graph TD
      └── Issue #123: Database migration for projects table
          - Alembic migration only
          - All columns, constraints, indexes
-   
+
    Phase 2: Endpoints (M2-CRUD) - Vertical slices
      ├── Issue #124: GET /projects - List projects
      │   - Model: Project (create)
@@ -233,7 +233,7 @@ graph TD
          - Resource: ProjectResource.delete()
          - Tests: deletion, not found, cascade
          - Auth: Guardian DELETE
-   
+
    Phase 3: Quality (M3-Quality)
      └── Issue #129: Performance & Documentation
          - Query optimization, indexes
@@ -250,18 +250,18 @@ graph TD
    **Structure d'une Issue créée** :
    ```markdown
    ## GET /projects - List projects with pagination
-   
+
    ### Description
    Implement complete endpoint for listing projects with pagination, filtering,
    and sorting. Includes model (first endpoint), schema, resource, auth, and tests.
-   
+
    ### Specification
    - 📋 Spec: spec/schema-api-projects-crud.md (Section 4.1)
    - 📖 OpenAPI: openapi/projects-api.yaml (GET /projects)
    - 🎯 Requirements: REQ-001, SEC-001, SEC-002, PERF-001, PERF-002
-   
+
    ### Implementation Scope (Complete Vertical Slice)
-   
+
    #### Files to Create
    - [ ] app/models/project_model.py - Project model
    - [ ] app/schemas/project_schema.py - ProjectSchema (base)
@@ -269,18 +269,18 @@ graph TD
    - [ ] app/routes.py - Register /v0/projects route
    - [ ] tests/unit/test_project_list.py - Unit tests
    - [ ] tests/integration/test_project_api_list.py - Integration tests
-   
+
    ### Components
-   
+
    **Model** (create):
    - Project with UUIDMixin, TimestampMixin
    - Fields: name, description, company_id, is_active
    - Indexes: company_id, created_at
-   
+
    **Schema** (create):
    - ProjectSchema for serialization
    - Nested objects if needed
-   
+
    **Resource** (implement):
    ```python
    class ProjectListResource(Resource):
@@ -290,7 +290,7 @@ graph TD
        def get(self):
            # Pagination, filtering, sorting
    ```
-   
+
    **Tests**:
    - List all projects (paginated)
    - Filter by company_id (automatic)
@@ -298,19 +298,19 @@ graph TD
    - Sorting (sort_by, sort_order)
    ```
    📊 Estimation d'Implémentation
-   
+
    Total Story Points: 28 (vs 42 avec découpage horizontal)
    Temps Estimé: 1.5-2 semaines développeur
    Taille d'Équipe: 1-2 développeurs
    Sprint Breakdown: 1 sprint (2 semaines)
-   
+
    Avantages découpage vertical:
    ✅ Chaque issue livre de la valeur (endpoint fonctionnel)
    ✅ Moins de dépendances entre issues
    ✅ PRs plus cohérentes et faciles à reviewer
    ✅ Possibilité de déployer incrémentalement
    ✅ Meilleur pour la parallélisation (endpoints indépendants)
-   
+
    Issues Créées: 7 issues (1 foundation + 5 endpoints + 1 quality)
    Milestones: 3 (Foundation, CRUD
    ### Guardian Integration
@@ -338,22 +338,22 @@ graph TD
    **Output** :
    ```
    📊 Estimation d'Implémentation
-   
+
    Total Story Points: 42
    Temps Estimé: 2-3 semaines développeur
    Taille d'Équipe: 1-2 développeurs
    Sprint Breakdown: 2 sprints (2 semaines chacun)
-   
+
    Risques:
    🟢 Low: CRUD standard
    🟡 Medium: Intégration Guardian
    🟢 Low: Schéma DB simple
-   
+
    Issues Créées: 14 issues
    Milestones: 4 (Foundation, CRUD, Hardening, Quality)
    ```
 
-**Résultat** : 
+**Résultat** :
 - ERD et graphe de dépendances
 - 10-15 GitHub Issues bien documentées
 - Milestones définis
@@ -510,6 +510,8 @@ tests/
 └── integration/
     ├── test_project_api_list.py
     ├── test_project_api_create.py
+```
+
     **Une issue = un endpoint complet** (vertical slice)
 - ✅ Laisser l'agent générer tout le code d'un coup pour l'endpoint
 - ✅ Vérifier la conformité avec la spec
@@ -517,6 +519,8 @@ tests/
 - ✅ Chaque endpoint est déployable indépendamment
 - ✅ Premier endpoint crée le model, les suivants le réutilisent
 - ⚠️ Ne pas essayer d'implémenter tous les endpoints d'un coup
+
+```
 app/
 ├── models/
 │   └── project_model.py      # SQLAlchemy model
@@ -525,7 +529,7 @@ app/
 ├── resources/
 │   └── project_res.py        # Flask-RESTful resources
 ├── services/                 # Si dépendances externes
-│   └── project_service.py    
+│   └── project_service.py  
 └── routes.py                 # Routes centralisées (MAJ)
 
 tests/
@@ -561,22 +565,22 @@ migrations/versions/
    ```
 
 2. **Gilfoyle analyse avec son style caractéristique** :
-   
+
    **Architecture** :
    - Vérifie la séparation des responsabilités
    - Identifie les couplages inutiles
    - Pointe les violations des principes SOLID
-   
+
    **Performance** :
    - Détecte les requêtes N+1
    - Identifie les inefficacités algorithmiques
    - Pointe les allocations mémoire inutiles
-   
+
    **Sécurité** :
    - Vérifie l'authentification/autorisation
    - Identifie les injections potentielles
    - Pointe les données sensibles non protégées
-   
+
    **Qualité** :
    - Vérifie la conformité aux standards (Ruff, mypy)
    - Identifie le code mort ou dupliqué
@@ -584,15 +588,15 @@ migrations/versions/
 
 3. **Exemple de feedback Gilfoyle** :
    ```
-   "Oh, c'est riche. Vous avez réussi à écrire une fonction qui fait 
-   à la fois trop de choses ET rien d'utile. Ça prend du talent. 
+   "Oh, c'est riche. Vous avez réussi à écrire une fonction qui fait
+   à la fois trop de choses ET rien d'utile. Ça prend du talent.
    Le genre de talent qui fait fuir les développeurs seniors.
-   
-   Votre gestion d'erreur a plus de trous qu'un gruyère laissé dans 
-   un stand de tir. Et cette query SQL ? J'ai vu des N+1 moins 
+
+   Votre gestion d'erreur a plus de trous qu'un gruyère laissé dans
+   un stand de tir. Et cette query SQL ? J'ai vu des N+1 moins
    évidents dans du code PHP des années 90.
-   
-   Mais bon, qu'est-ce que j'en sais... Je suis juste le meilleur 
+
+   Mais bon, qu'est-ce que j'en sais... Je suis juste le meilleur
    développeur de cette pièce."
    ```
 
@@ -622,7 +626,7 @@ migrations/versions/
    ```
    @git-github-expert Prépare mes commits pour la PR
    ```
-   
+
    L'agent vérifie :
    - Commits bien nommés (Conventional Commits)
    - Pas de code commented out
@@ -644,19 +648,19 @@ migrations/versions/
    **Description complète** (selon template)
    ```markdown
    ## Description
-   Implémentation du modèle SQLAlchemy Project selon la spécification 
+   Implémentation du modèle SQLAlchemy Project selon la spécification
    et l'issue #124.
-   
+
    ## Type de changement
    - [x] Nouvelle fonctionnalité (non-breaking change)
-   
+
    ## Issue
    Closes #124
-   
+
    ## Spécification
    - Spec: spec/schema-api-projects-crud.md (Section 4)
    - OpenAPI: openapi/projects-api.yaml
-   
+
    ## Changements
    - ✅ Model Project avec UUIDMixin, TimestampMixin
    - ✅ Champs: name, description, company_id, is_active
@@ -665,21 +669,21 @@ migrations/versions/
    - ✅ Relationship: tasks (one-to-many)
    - ✅ Unit tests (95% coverage)
    - ✅ Migration Alembic
-   
+
    ## Tests
    ```bash
    make test-unit
    # test_project_model.py: 12 passed
    # Coverage: 95%
    ```
-   
+
    ## Checklist
    - [x] Code suit les standards (Ruff, mypy)
    - [x] Tests ajoutés (≥85% coverage)
    - [x] Migration DB créée
    - [x] Documentation inline (docstrings)
    - [x] Pas de breaking changes
-   
+
    ## Reviewers
    @tech-lead
    @tech-lead @backend-team
@@ -710,9 +714,9 @@ migrations/versions/
 # ============================================
 # PHASE 1: SPÉCIFICATION
 # ============================================
-@specification 
+@specification
 Je veux créer un endpoint pour gérer les tâches (tasks).
-Contexte: Les tâches sont associées à des projets. Chaque tâche a un statut 
+Contexte: Les tâches sont associées à des projets. Chaque tâche a un statut
 (todo, in_progress, done), un assignee, des dates de début/fin, et une priorité.
 Il faut un CRUD complet avec:
 - Authentification JWT obligatoire
@@ -739,7 +743,7 @@ Il faut un CRUD complet avec:
 # → Valide avec openapi-spec-validator
 # → Génère docs/tasks-api.html
 GET /tasks list)
-@git-github-expert 
+@git-github-expert
 Crée une branche pour l'issue #202 (GET /tasks endpoint)
 
 # → git checkout -b feature/API-202-get-tasks-list
@@ -748,7 +752,7 @@ Crée une branche pour l'issue #202 (GET /tasks endpoint)
 # ============================================
 # PHASE 5: IMPLÉMENTATION (VERTICAL SLICE)
 # ============================================
-@flask-api-expert 
+@flask-api-expert
 Implémente GET /tasks selon:
 - Spec: spec/schema-api-tasks-crud.md (Section 4.1)
 - Issue: #202
@@ -771,7 +775,7 @@ make check
 make test-unit
 # → ✅ All checks passed
 # → ✅ 10 tests passed, 90re issue: #202 (Task model)
-@git-github-expert 
+@git-github-expert
 Crée une branche pour l'issue #202 (Task model)
 
 # → git 'endpoint GET /tasks que je viens d'implémenter
@@ -782,7 +786,7 @@ Crée une branche pour l'issue #202 (Task model)
 #  vous aurez plus de 1000 tasks. Ajoutez-le."
 
 # Corrections après feedback:
-@flask-api-expert 
+@flask-api-expert
 Ajoute l'index manquant sur task_model.py (project_id)
 
 # Re-review:
@@ -792,7 +796,7 @@ Ajoute l'index manquant sur task_model.py (project_id)
 # ============================================
 # PHASE 7: PULL REQUEST
 # ============================================
-@git-github-expert 
+@git-github-expert
 Crée une PR pour feature/API-202-get-tasks-list
 Issue: #202
 
@@ -828,7 +832,7 @@ Issue: #202
 # → Branche: feature/API-206-delete-task
 # → Génère: TaskResource.delete() + tests
 # → PR distincteions après feedback:
-@flask-api-expert 
+@flask-api-expert
 Ajoute l'index manquant sur task_model.py
 
 # Re-review:
@@ -1016,7 +1020,7 @@ wfp-flask-template/
 
 **Solution** :
 ```
-@specification L'OpenAPI a des erreurs de validation. 
+@specification L'OpenAPI a des erreurs de validation.
 Voici les erreurs: [copier les erreurs]
 Corrige le fichier openapi/spec.yaml
 ```

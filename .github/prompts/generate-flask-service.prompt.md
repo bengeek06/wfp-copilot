@@ -56,21 +56,21 @@ logger = logging.getLogger(__name__)
 
 class ${serviceName.capitalize()}Service:
     """Client for ${serviceName.capitalize()} microservice.
-    
+
     Provides methods for interacting with ${serviceName.capitalize()} API endpoints
     with automatic retries, timeouts, and error handling.
-    
+
     Attributes:
         base_url: Base URL of the ${serviceName} service.
         timeout: Request timeout in seconds.
         session: Configured requests session with retry logic.
-    
+
     Examples:
         >>> service = ${serviceName.capitalize()}Service()
         >>> result = service.check_access(user_id="123", resource="users", operation="READ")
         >>> print(result["access_granted"])
     """
-    
+
     def __init__(
         self,
         base_url: Optional[str] = None,
@@ -78,7 +78,7 @@ class ${serviceName.capitalize()}Service:
         max_retries: int = 3
     ) -> None:
         """Initialize ${serviceName.capitalize()} service client.
-        
+
         Args:
             base_url: Base URL of ${serviceName} service (defaults to env var).
             timeout: Request timeout in seconds (default: 10).
@@ -89,26 +89,26 @@ class ${serviceName.capitalize()}Service:
             "http://localhost:5000"
         )
         self.timeout = timeout
-        
+
         # Configure session with retry logic
         self.session = self._create_session(max_retries)
-        
+
         logger.info(
             f"${serviceName.capitalize()}Service initialized",
             extra={"base_url": self.base_url, "timeout": timeout}
         )
-    
+
     def _create_session(self, max_retries: int) -> requests.Session:
         """Create configured requests session with retry logic.
-        
+
         Args:
             max_retries: Maximum number of retry attempts.
-        
+
         Returns:
             Configured requests session.
         """
         session = requests.Session()
-        
+
         # Configure retry strategy
         retry_strategy = Retry(
             total=max_retries,
@@ -117,20 +117,20 @@ class ${serviceName.capitalize()}Service:
             allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             raise_on_status=False
         )
-        
+
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
-        
+
         # Set default headers
         session.headers.update({
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "wfp-flask-service/1.0"
         })
-        
+
         return session
-    
+
     def _make_request(
         self,
         method: str,
@@ -138,22 +138,22 @@ class ${serviceName.capitalize()}Service:
         **kwargs: Any
     ) -> dict[str, Any]:
         """Make HTTP request to ${serviceName} service.
-        
+
         Args:
             method: HTTP method (GET, POST, PUT, PATCH, DELETE).
             endpoint: API endpoint path.
             **kwargs: Additional arguments for requests (json, params, headers, etc.).
-        
+
         Returns:
             Response data as dictionary.
-        
+
         Raises:
             ServiceUnavailableError: If service is unavailable.
             ExternalServiceError: If service returns error response.
             Timeout: If request times out.
         """
         url = urljoin(self.base_url, endpoint)
-        
+
         try:
             logger.debug(
                 f"${serviceName.capitalize()} request",
@@ -163,14 +163,14 @@ class ${serviceName.capitalize()}Service:
                     "kwargs": {k: v for k, v in kwargs.items() if k != "json"}
                 }
             )
-            
+
             response = self.session.request(
                 method=method,
                 url=url,
                 timeout=self.timeout,
                 **kwargs
             )
-            
+
             # Log response
             logger.debug(
                 f"${serviceName.capitalize()} response",
@@ -179,13 +179,13 @@ class ${serviceName.capitalize()}Service:
                     "url": url
                 }
             )
-            
+
             # Handle error responses
             if response.status_code >= 500:
                 raise ServiceUnavailableError(
                     f"${serviceName.capitalize()} service unavailable: {response.status_code}"
                 )
-            
+
             if response.status_code >= 400:
                 error_detail = response.json() if response.content else {}
                 raise ExternalServiceError(
@@ -193,10 +193,10 @@ class ${serviceName.capitalize()}Service:
                     status_code=response.status_code,
                     details=error_detail
                 )
-            
+
             # Return JSON response
             return response.json() if response.content else {}
-            
+
         except Timeout:
             logger.error(
                 f"${serviceName.capitalize()} request timeout",
@@ -222,7 +222,7 @@ class ${serviceName.capitalize()}Service:
             raise ExternalServiceError(
                 f"${serviceName.capitalize()} request failed: {str(e)}"
             )
-    
+
     # Example method - customize based on actual service API
     def check_access(
         self,
@@ -232,16 +232,16 @@ class ${serviceName.capitalize()}Service:
         context: Optional[dict[str, Any]] = None
     ) -> dict[str, Any]:
         """Check if user has access to perform operation on resource.
-        
+
         Args:
             user_id: User UUID.
             resource: Resource name (e.g., "users", "projects").
             operation: Operation type (e.g., "READ", "CREATE", "UPDATE").
             context: Optional context data for access check.
-        
+
         Returns:
             Access check result with access_granted boolean.
-        
+
         Examples:
             >>> service.check_access("user-123", "projects", "READ")
             {"access_granted": True, "reason": "granted"}
@@ -252,19 +252,19 @@ class ${serviceName.capitalize()}Service:
             "operation": operation,
             "context": context or {}
         }
-        
+
         return self._make_request(
             "POST",
             "/check-access",
             json=payload
         )
-    
+
     def get_user_info(self, user_id: str) -> dict[str, Any]:
         """Get user information by ID.
-        
+
         Args:
             user_id: User UUID.
-        
+
         Returns:
             User information dictionary.
         """
@@ -272,10 +272,10 @@ class ${serviceName.capitalize()}Service:
             "GET",
             f"/users/{user_id}"
         )
-    
+
     def health_check(self) -> dict[str, Any]:
         """Check ${serviceName} service health.
-        
+
         Returns:
             Health status dictionary.
         """
@@ -291,15 +291,15 @@ _${serviceName}_service_instance: Optional[${serviceName.capitalize()}Service] =
 
 def get_${serviceName}_service() -> ${serviceName.capitalize()}Service:
     """Get or create ${serviceName} service singleton instance.
-    
+
     Returns:
         ${serviceName.capitalize()}Service instance.
     """
     global _${serviceName}_service_instance
-    
+
     if _${serviceName}_service_instance is None:
         _${serviceName}_service_instance = ${serviceName.capitalize()}Service()
-    
+
     return _${serviceName}_service_instance
 ```
 
@@ -386,7 +386,7 @@ class ServiceWithCircuitBreaker:
             fail_max=5,
             timeout_duration=60
         )
-    
+
     def call_service(self):
         return self.breaker.call(self._make_request, ...)
 ```
@@ -495,10 +495,10 @@ Mock external calls in tests:
 def test_check_access(mock_request):
     """Test access check."""
     mock_request.return_value = {"access_granted": True}
-    
+
     service = GuardianService()
     result = service.check_access("user-123", "projects", "READ")
-    
+
     assert result["access_granted"] is True
     mock_request.assert_called_once()
 ```

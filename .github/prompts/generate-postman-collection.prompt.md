@@ -532,7 +532,7 @@ pm.test('Response has Location header', () => {
 pm.test('Created resource has ID', () => {
     const response = pm.response.json();
     pm.expect(response).to.have.property('id');
-    
+
     // Save ID for subsequent requests
     pm.collectionVariables.set('project_id', response.id);
 });
@@ -540,7 +540,7 @@ pm.test('Created resource has ID', () => {
 pm.test('Created resource matches request', () => {
     const response = pm.response.json();
     const request = JSON.parse(pm.request.body.raw);
-    
+
     pm.expect(response.name).to.equal(request.name);
     pm.expect(response.description).to.equal(request.description);
 });
@@ -573,7 +573,7 @@ pm.test('Response matches schema', () => {
             updated_at: { type: 'string', format: 'date-time' }
         }
     };
-    
+
     pm.response.to.have.jsonSchema(schema);
 });
 ```
@@ -588,7 +588,7 @@ pm.test('Status is 200 OK', () => {
 pm.test('Updated fields match request', () => {
     const response = pm.response.json();
     const request = JSON.parse(pm.request.body.raw);
-    
+
     Object.keys(request).forEach(key => {
         pm.expect(response[key]).to.equal(request[key]);
     });
@@ -599,7 +599,7 @@ pm.test('updated_at is recent', () => {
     const updatedAt = new Date(response.updated_at);
     const now = new Date();
     const diffSeconds = (now - updatedAt) / 1000;
-    
+
     pm.expect(diffSeconds).to.be.below(10); // Updated within 10 seconds
 });
 ```

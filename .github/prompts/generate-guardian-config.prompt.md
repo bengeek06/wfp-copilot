@@ -234,18 +234,18 @@ from ..utils.rate_limit import limiter
 
 class ${Resource}ListResource(Resource):
     """${Resource} collection operations."""
-    
+
     @require_jwt_auth
     @access_required(Operation.LIST, "${resource_plural}")
     @limiter.limit("100 per minute")
     def get(self):
         """List ${resources} with pagination.
-        
+
         Authorization:
             - JWT: Required
             - Guardian: Requires LIST permission on ${resource_plural}
             - Context: company_id from JWT
-        
+
         Returns:
             200: Paginated list of ${resources}
             401: Missing or invalid JWT token
@@ -254,22 +254,22 @@ class ${Resource}ListResource(Resource):
         """
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Query filtered by company_id automatically
         # Guardian has already verified LIST permission
         ...
-    
+
     @require_jwt_auth
     @access_required(Operation.CREATE, "${resource_plural}")
     @limiter.limit("50 per minute")
     def post(self):
         """Create new ${resource}.
-        
+
         Authorization:
             - JWT: Required
             - Guardian: Requires CREATE permission on ${resource_plural}
             - Context: company_id from JWT (auto-assigned)
-        
+
         Returns:
             201: ${Resource} created successfully
             400: Invalid request data
@@ -280,7 +280,7 @@ class ${Resource}ListResource(Resource):
         """
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Auto-assign company_id from JWT (user cannot override)
         # Guardian has already verified CREATE permission
         ...
@@ -288,19 +288,19 @@ class ${Resource}ListResource(Resource):
 
 class ${Resource}Resource(Resource):
     """${Resource} item operations."""
-    
+
     @require_jwt_auth
     @access_required(Operation.READ, "${resource_plural}")
     @limiter.limit("100 per minute")
     def get(self, ${resource}_id: str):
         """Retrieve ${resource} by ID.
-        
+
         Authorization:
             - JWT: Required
             - Guardian: Requires READ permission on ${resource_plural}
             - Context: company_id from JWT, ${resource}_id from URL
             - Ownership: Resource must belong to user's company
-        
+
         Returns:
             200: ${Resource} details
             401: Missing or invalid JWT token
@@ -310,24 +310,24 @@ class ${Resource}Resource(Resource):
         """
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Query by id AND company_id (security!)
         # Guardian has already verified READ permission
         # If not found OR wrong company → 404
         ...
-    
+
     @require_jwt_auth
     @access_required(Operation.UPDATE, "${resource_plural}")
     @limiter.limit("50 per minute")
     def patch(self, ${resource}_id: str):
         """Update ${resource}.
-        
+
         Authorization:
             - JWT: Required
             - Guardian: Requires UPDATE permission on ${resource_plural}
             - Context: company_id from JWT, ${resource}_id from URL
             - Ownership: Resource must belong to user's company
-        
+
         Returns:
             200: ${Resource} updated
             400: Invalid request data
@@ -339,23 +339,23 @@ class ${Resource}Resource(Resource):
         """
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Verify ownership via company_id
         # Guardian has already verified UPDATE permission
         ...
-    
+
     @require_jwt_auth
     @access_required(Operation.DELETE, "${resource_plural}")
     @limiter.limit("50 per minute")
     def delete(self, ${resource}_id: str):
         """Delete ${resource}.
-        
+
         Authorization:
             - JWT: Required
             - Guardian: Requires DELETE permission on ${resource_plural}
             - Context: company_id from JWT, ${resource}_id from URL
             - Ownership: Resource must belong to user's company
-        
+
         Returns:
             204: ${Resource} deleted
             401: Missing or invalid JWT token
@@ -366,7 +366,7 @@ class ${Resource}Resource(Resource):
         """
         claims = get_jwt_claims()
         company_id = claims['company_id']
-        
+
         # Verify ownership via company_id
         # Guardian has already verified DELETE permission
         # Check cascade constraints
@@ -398,14 +398,14 @@ class Operation(Enum):
 
 def access_required(operation: Operation, resource_name: str):
     """Check Guardian authorization before executing endpoint.
-    
+
     Args:
         operation: Operation type (LIST, CREATE, READ, UPDATE, DELETE)
         resource_name: Resource name (e.g., "projects")
-    
+
     Returns:
         Decorator that checks authorization
-    
+
     Raises:
         403: If user lacks required permission
     """
@@ -413,19 +413,19 @@ def access_required(operation: Operation, resource_name: str):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             claims = get_jwt_claims()
-            
+
             # Build context
             context = {
                 "company_id": claims['company_id'],
                 "user_id": claims['user_id'],
             }
-            
+
             # Add resource_id if item operation
             if operation in [Operation.READ, Operation.UPDATE, Operation.DELETE]:
                 resource_id_key = f"{resource_name.rstrip('s')}_id"
                 if resource_id_key in kwargs:
                     context[resource_id_key] = kwargs[resource_id_key]
-            
+
             # Call Guardian /check-access endpoint
             response = requests.post(
                 f"{GUARDIAN_URL}/check-access",
@@ -438,18 +438,18 @@ def access_required(operation: Operation, resource_name: str):
                 headers={"Authorization": f"Bearer {claims['access_token']}"},
                 timeout=5
             )
-            
+
             if response.status_code != 200:
                 abort(403, "Access denied")
-            
+
             data = response.json()
             if not data.get("access_granted"):
                 reason = data.get("reason", "no_permission")
                 abort(403, f"Access denied: {reason}")
-            
+
             # Access granted, proceed
             return f(*args, **kwargs)
-        
+
         return decorated_function
     return decorator
 ```

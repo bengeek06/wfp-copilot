@@ -211,12 +211,12 @@ gantt
     dateFormat  YYYY-MM-DD
     section Phase 1
     Foundation           :done, f1, 2026-01-07, 1d
-    
+
     section Phase 2 - Dev 1
     GET list (with model) :active, e1, after f1, 1d
     POST create          :e2, after e1, 1d
     Quality              :e6, after e5, 1d
-    
+
     section Phase 2 - Dev 2
     GET detail           :e3, after e1, 1d
     PATCH update         :e4, after e3, 1d
@@ -229,7 +229,7 @@ gantt
 - Other endpoints: Parallel (2 devs) - all depend only on GET list
 - Phase 3 (Quality): Sequential or parallel (both devs)
 
-**Efficiency Gain**: 
+**Efficiency Gain**:
 - Serial (1 dev): 10 days
 - Parallel (2 devs): 6-7 days (~40% faster)
 

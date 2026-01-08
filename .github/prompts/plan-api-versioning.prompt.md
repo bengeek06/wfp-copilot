@@ -119,7 +119,7 @@ from flask import request
 @app.route('/projects')
 def list_projects():
     version = request.headers.get('API-Version', 'v1')
-    
+
     if version == 'v1':
         return jsonify({"data": projects, "meta": metadata})
     elif version == 'v2':
@@ -323,14 +323,14 @@ def add_deprecation_headers(response, sunset_date, new_endpoint=None):
     """Add deprecation headers to response."""
     response.headers['Deprecation'] = 'true'
     response.headers['Sunset'] = sunset_date.strftime('%a, %d %b %Y %H:%M:%S GMT')
-    
+
     if new_endpoint:
         response.headers['Link'] = f'<https://docs.example.com/migration>; rel="deprecation"'
         response.headers['Warning'] = (
             f'299 - "This endpoint is deprecated. Use {new_endpoint} instead. '
             f'Removal date: {sunset_date.date()}"'
         )
-    
+
     return response
 
 @app.route('/v1/projects/<project_id>/stats')
@@ -339,7 +339,7 @@ def project_stats_v1(project_id):
     # Return stats data
     stats = get_project_stats(project_id)
     response = make_response(jsonify(stats))
-    
+
     # Add deprecation headers
     sunset_date = datetime(2026, 6, 1, 23, 59, 59)
     response = add_deprecation_headers(
@@ -347,7 +347,7 @@ def project_stats_v1(project_id):
         sunset_date,
         new_endpoint='/v2/projects/{id}/analytics'
     )
-    
+
     return response
 ```
 

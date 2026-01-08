@@ -116,7 +116,7 @@ model: "[only if specific model required]"
 ## [Instructions Section]
 [Step-by-step instructions following established patterns]
 
-## [Context/Input Section] 
+## [Context/Input Section]
 [Variable usage and context requirements]
 
 ## [Output Section]

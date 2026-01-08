@@ -1,0 +1,215 @@
+name: Dependencies
+
+on:
+  schedule:
+    # Run every Monday at 10:00 UTC (after security scan)
+    - cron: '0 10 * * 1'
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit safety
+          pip install -e ".[dev]"
+
+      - name: Run pip-audit
+        id: pip-audit
+        run: |
+          # Ignore py (PYSEC-2022-42969) as it is a dev dependency via interrogate
+          pip-audit --ignore-vuln PYSEC-2022-42969 --format json > pip-audit-results.json || true
+          if [ -s pip-audit-results.json ]; then
+            echo "vulnerabilities=true" >> $GITHUB_OUTPUT
+          else
+            echo "vulnerabilities=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Safety check
+        id: safety
+        run: |
+          # Ignore py (51457)
+          safety check --ignore 51457 --json --output safety-results.json || true
+          if [ -s safety-results.json ]; then
+            echo "vulnerabilities=true" >> $GITHUB_OUTPUT
+          else
+            echo "vulnerabilities=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v6
+        with:
+          name: dependency-audit-results
+          path: |
+            pip-audit-results.json
+            safety-results.json
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && (steps.pip-audit.outputs.vulnerabilities == 'true' || steps.safety.outputs.vulnerabilities == 'true')
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🔒 Dependency Security Report\n\n';
+
+            try {
+              const pipAudit = JSON.parse(fs.readFileSync('pip-audit-results.json', 'utf8'));
+              if (pipAudit.length > 0) {
+                comment += '### pip-audit findings:\n\n';
+                pipAudit.forEach(vuln => {
+                  comment += `- **${vuln.name}** ${vuln.version}: ${vuln.description}\n`;
+                });
+              }
+            } catch (e) {
+              comment += 'pip-audit: No results\n\n';
+            }
+
+            try {
+              const safety = JSON.parse(fs.readFileSync('safety-results.json', 'utf8'));
+              if (safety.vulnerabilities && safety.vulnerabilities.length > 0) {
+                comment += '\n### Safety findings:\n\n';
+                safety.vulnerabilities.forEach(vuln => {
+                  comment += `- **${vuln.package_name}** ${vuln.analyzed_version}: ${vuln.vulnerability}\n`;
+                });
+              }
+            } catch (e) {
+              comment += 'Safety: No results\n\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  outdated:
+    name: Check Outdated Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Check for outdated packages
+        id: outdated
+        run: |
+          pip list --outdated --format=json > outdated.json
+          if [ "$(cat outdated.json)" != "[]" ]; then
+            echo "has_outdated=true" >> $GITHUB_OUTPUT
+            echo "## Outdated Packages" >> outdated.md
+            echo "" >> outdated.md
+            jq -r '.[] | "- **\(.name)**: \(.version) → \(.latest_version)"' outdated.json >> outdated.md
+          else
+            echo "has_outdated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload outdated report
+        if: steps.outdated.outputs.has_outdated == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: outdated-dependencies
+          path: |
+            outdated.json
+            outdated.md
+
+      - name: Create issue for outdated dependencies
+        if: github.event_name == 'schedule' && steps.outdated.outputs.has_outdated == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const outdated = JSON.parse(fs.readFileSync('outdated.json', 'utf8'));
+
+            let body = '## 📦 Outdated Dependencies Report\n\n';
+            body += `Found ${outdated.length} outdated package(s):\n\n`;
+
+            outdated.forEach(pkg => {
+              body += `### ${pkg.name}\n`;
+              body += `- Current: \`${pkg.version}\`\n`;
+              body += `- Latest: \`${pkg.latest_version}\`\n`;
+              body += `- Type: \`${pkg.latest_filetype}\`\n\n`;
+            });
+
+            body += '\n---\n';
+            body += '*This issue was automatically generated by the Dependencies workflow*';
+
+            // Check if there's already an open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dependencies,automated'
+            });
+
+            const existingIssue = issues.data.find(issue =>
+              issue.title === '📦 Outdated Dependencies Detected'
+            );
+
+            if (existingIssue) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: body
+              });
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '📦 Outdated Dependencies Detected',
+                body: body,
+                labels: ['dependencies', 'automated']
+              });
+            }
+
+  summary:
+    name: Dependencies Summary
+    runs-on: ubuntu-latest
+    needs: [audit, outdated]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Audit: ${{ needs.audit.result }}"
+          echo "Outdated Check: ${{ needs.outdated.result }}"
+
+          if [[ "${{ needs.audit.result }}" != "success" ]] || \
+             [[ "${{ needs.outdated.result }}" != "success" ]]; then
+            echo "❌ Dependency checks failed"
+            exit 1
+          fi
+
+          echo "✅ All dependency checks passed"
