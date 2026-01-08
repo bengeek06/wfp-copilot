@@ -19,8 +19,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install build dependencies and upgrade system packages for security patches
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     libpq-dev \
@@ -112,8 +114,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install only runtime system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install runtime dependencies and upgrade system packages for security patches
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
     curl \
     libpq5 \
     postgresql-client \
