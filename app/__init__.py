@@ -94,6 +94,20 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
                 service_name=app.config.get("SERVICE_NAME", "wfp-flask-template"),
             )
 
+        # Define authentication functions outside the request handler for efficiency
+        from app.utils.metrics_auth import require_metrics_api_key
+
+        @require_metrics_api_key
+        def _check_auth_only() -> tuple[dict[str, Any], int]:
+            """Check authentication for metrics endpoint without rate limiting."""
+            return ({}, 200)
+
+        @limiter.limit("10 per minute")
+        @require_metrics_api_key
+        def _check_auth_with_rate_limit() -> tuple[dict[str, Any], int]:
+            """Check authentication and apply rate limiting for metrics endpoint."""
+            return ({}, 200)
+
         # Protect /metrics endpoint with API key authentication and rate limiting
         @app.before_request
         def authenticate_metrics() -> tuple[dict[str, Any], int] | None:
@@ -108,24 +122,11 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
             if request.path != "/metrics":
                 return None
 
-            from app.utils.metrics_auth import require_metrics_api_key
-
             # Apply rate limiting if enabled
             if app.config.get("RATE_LIMIT_ENABLED"):
-                # Create a rate-limited function for metrics endpoint
-                @limiter.limit("10 per minute")
-                @require_metrics_api_key
-                def _check_auth_with_rate_limit() -> tuple[dict[str, Any], int]:
-                    return ({}, 200)
-
                 result: tuple[dict[str, Any], int] | Any = _check_auth_with_rate_limit()
             else:
-                # Only apply authentication without rate limiting
-                @require_metrics_api_key
-                def _check_auth() -> tuple[dict[str, Any], int]:
-                    return ({}, 200)
-
-                result: tuple[dict[str, Any], int] | Any = _check_auth()
+                result: tuple[dict[str, Any], int] | Any = _check_auth_only()
 
             # If not successful (200), return error response
             if isinstance(result, tuple) and result[1] != 200:
