@@ -16,6 +16,7 @@ to prevent unauthorized access to application metrics and system information.
 from __future__ import annotations
 
 import logging
+import secrets
 from datetime import UTC, datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any
@@ -133,7 +134,8 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
         # Extract and validate API key
         provided_key = auth_header[7:]  # Remove 'Bearer ' prefix
 
-        if provided_key != api_key:
+        # Use constant-time comparison to prevent timing attacks
+        if not secrets.compare_digest(provided_key, api_key):
             logger.warning(
                 "Invalid metrics API key attempt",
                 extra={
