@@ -28,6 +28,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _get_iso_timestamp() -> str:
+    """Generate ISO 8601 formatted UTC timestamp for API responses.
+
+    Returns:
+        Current UTC time in ISO 8601 format.
+    """
+    return datetime.now(UTC).isoformat()
+
+
 def _sanitize_for_log(value: Any) -> str | None:
     """Sanitize potentially untrusted values before logging.
 
@@ -79,7 +88,7 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
             return (
                 {
                     "message": "Metrics API key not configured",
-                    "timestamp": datetime.now(UTC).isoformat(),
+                    "timestamp": _get_iso_timestamp(),
                 },
                 500,
             )
@@ -99,7 +108,7 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
             return (
                 {
                     "message": "Missing Authorization header",
-                    "timestamp": datetime.now(UTC).isoformat(),
+                    "timestamp": _get_iso_timestamp(),
                 },
                 401,
             )
@@ -116,7 +125,7 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
             return (
                 {
                     "message": "Invalid Authorization format. Expected: Bearer <key>",
-                    "timestamp": datetime.now(UTC).isoformat(),
+                    "timestamp": _get_iso_timestamp(),
                 },
                 401,
             )
@@ -136,7 +145,7 @@ def require_metrics_api_key(f: Callable[..., Any]) -> Callable[..., Any]:
             return (
                 {
                     "message": "Invalid API key",
-                    "timestamp": datetime.now(UTC).isoformat(),
+                    "timestamp": _get_iso_timestamp(),
                 },
                 401,
             )
