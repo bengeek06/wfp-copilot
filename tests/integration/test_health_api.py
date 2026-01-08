@@ -13,6 +13,8 @@ Tests health endpoints with real HTTP requests and database connections
 to verify end-to-end functionality.
 """
 
+import time
+
 from flask.testing import FlaskClient
 
 
@@ -257,8 +259,6 @@ class TestHealthEndpointsPerformance:
         When: GET /health is called
         Then: Response time is reasonable (< 200ms)
         """
-        import time
-
         start = time.time()
         response = client.get("/health")
         elapsed = (time.time() - start) * 1000  # Convert to ms
@@ -274,8 +274,6 @@ class TestHealthEndpointsPerformance:
         When: GET /ready is called
         Then: Response time is reasonable (< 500ms)
         """
-        import time
-
         start = time.time()
         response = client.get("/ready")
         elapsed = (time.time() - start) * 1000
@@ -291,8 +289,6 @@ class TestHealthEndpointsPerformance:
         When: GET /version is called
         Then: Response time is very fast (< 50ms typically)
         """
-        import time
-
         start = time.time()
         response = client.get("/version")
         elapsed = (time.time() - start) * 1000
