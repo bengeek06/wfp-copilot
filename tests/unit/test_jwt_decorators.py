@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
-from flask import Flask, g, jsonify
+from flask import Flask, Response, g, jsonify
 
 from app.services.guardian_service import Operation
 from app.utils.jwt_decorators import (
@@ -52,7 +52,7 @@ def app() -> Flask:
 
     @test_app.route("/protected")
     @require_jwt_auth
-    def protected_route() -> tuple[dict[str, Any], int]:
+    def protected_route() -> tuple[Response, int]:
         """Test route requiring JWT authentication."""
         return jsonify(
             {
@@ -63,7 +63,7 @@ def app() -> Flask:
         ), 200
 
     @test_app.route("/public")
-    def public_route() -> tuple[dict[str, Any], int]:
+    def public_route() -> tuple[Response, int]:
         """Test route without authentication."""
         return jsonify({"message": "public"}), 200
 
@@ -113,7 +113,7 @@ def generate_valid_token(
         "iat": datetime.now(UTC),
     }
 
-    return jwt.encode(
+    return jwt.encode(  # type: ignore[no-any-return]
         payload, app.config["JWT_SECRET_KEY"], algorithm=app.config["JWT_ALGORITHM"]
     )
 
@@ -487,21 +487,21 @@ class TestAccessRequired:
         @test_app.route("/projects/<project_id>")
         @require_jwt_auth
         @access_required(Operation.READ, "projects")
-        def get_project(project_id: str) -> tuple[dict[str, Any], int]:
+        def get_project(project_id: str) -> tuple[Response, int]:
             """Test route with access control."""
             return jsonify({"id": project_id}), 200
 
         @test_app.route("/projects", methods=["POST"])
         @require_jwt_auth
         @access_required(Operation.CREATE, "projects")
-        def create_project() -> tuple[dict[str, Any], int]:
+        def create_project() -> tuple[Response, int]:
             """Test route for creating projects."""
             return jsonify({"created": True}), 201
 
         @test_app.route("/users/<user_id>", methods=["DELETE"])
         @require_jwt_auth
         @access_required(Operation.DELETE, "users")
-        def delete_user(user_id: str) -> tuple[dict[str, Any], int]:
+        def delete_user(user_id: str) -> tuple[Response, int]:
             """Test route for deleting users."""
             return jsonify({"deleted": user_id}), 200
 
@@ -620,7 +620,7 @@ class TestAccessRequired:
         # Create route without @require_jwt_auth
         @guardian_app.route("/test-no-jwt")
         @access_required(Operation.READ, "test")
-        def test_route() -> tuple[dict[str, Any], int]:
+        def test_route() -> tuple[Response, int]:
             return jsonify({"test": True}), 200
 
         with guardian_app.test_client() as client:

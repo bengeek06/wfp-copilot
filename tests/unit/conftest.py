@@ -27,6 +27,9 @@ from flask.testing import FlaskClient
 
 from app import create_app
 
+# Set required environment variables for all unit tests
+os.environ.setdefault("METRICS_API_KEY", "test-metrics-api-key-integration-12345678")
+
 # === Constants ===
 
 # Mock patch targets
@@ -129,7 +132,7 @@ def assert_response() -> Callable:
         else:
             assert "error" not in data
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     return _assert
 
@@ -147,7 +150,7 @@ def jwt_secret(app: Flask) -> str:
     Returns:
         JWT secret key for token generation.
     """
-    return app.config["JWT_SECRET_KEY"]
+    return app.config["JWT_SECRET_KEY"]  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -174,7 +177,7 @@ def company_id(generate_uuid: Callable) -> str:
     Returns:
         UUID string for company.
     """
-    return generate_uuid()
+    return generate_uuid()  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -255,7 +258,7 @@ def generate_jwt(jwt_secret: str) -> Callable[[dict], str]:
     """
 
     def _generate(claims: dict[str, Any]) -> str:
-        return jwt.encode(claims, jwt_secret, algorithm="HS256")
+        return jwt.encode(claims, jwt_secret, algorithm="HS256")  # type: ignore[no-any-return]
 
     return _generate
 
@@ -271,7 +274,7 @@ def user_token(user_claims: dict, generate_jwt: Callable) -> str:
     Returns:
         Encoded JWT token string.
     """
-    return generate_jwt(user_claims)
+    return generate_jwt(user_claims)  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -285,7 +288,7 @@ def admin_token(admin_claims: dict, generate_jwt: Callable) -> str:
     Returns:
         Encoded JWT token string with admin roles.
     """
-    return generate_jwt(admin_claims)
+    return generate_jwt(admin_claims)  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -299,7 +302,7 @@ def expired_token(expired_claims: dict, generate_jwt: Callable) -> str:
     Returns:
         Encoded JWT token that is already expired.
     """
-    return generate_jwt(expired_claims)
+    return generate_jwt(expired_claims)  # type: ignore[no-any-return]
 
 
 @pytest.fixture

@@ -35,6 +35,8 @@ def app() -> Generator[Flask, None, None]:
         Flask application configured for integration tests.
     """
     os.environ["TESTING"] = "true"
+    # Set METRICS_API_KEY for tests (required by config)
+    os.environ["METRICS_API_KEY"] = "test-metrics-api-key-integration-12345678"
 
     # Ensure instance directory exists for SQLite
     instance_dir = Path(__file__).parent.parent.parent / "instance" / "data"

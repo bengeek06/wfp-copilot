@@ -111,10 +111,15 @@ class Config:
     IDENTITY_SERVICE_API_KEY: str = os.environ.get("IDENTITY_SERVICE_API_KEY", "")
 
     # Metrics Configuration
-    METRICS_API_KEY: str = os.environ.get("METRICS_API_KEY", "")
+    # METRICS_API_KEY is required - no default value (SEC-002, CON-004)
+    METRICS_API_KEY: str = os.environ["METRICS_API_KEY"]  # Raises KeyError if not set
     PROMETHEUS_METRICS_ENABLED: bool = (
         os.environ.get("PROMETHEUS_METRICS_ENABLED", "true").lower() == "true"
     )
+    RATE_LIMIT_ENABLED: bool = (
+        os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
+    )
+    RATE_LIMIT_DEFAULT: str = os.environ.get("RATE_LIMIT_DEFAULT", "10 per minute")
 
     # Service Configuration
     SERVICE_NAME: Final[str] = os.environ.get("SERVICE_NAME", "wfp-flask-template")
@@ -140,10 +145,7 @@ class Config:
         os.environ.get("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
     )
 
-    # Rate Limiting Configuration
-    RATE_LIMIT_ENABLED: bool = (
-        os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
-    )
+    # Rate Limiting Configuration (defined above in Config base class)
     RATE_LIMIT_STORAGE_URL: str = os.environ.get("RATE_LIMIT_STORAGE_URL", "memory://")
 
     # Security Headers
