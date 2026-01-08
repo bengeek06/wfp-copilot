@@ -196,6 +196,99 @@ def show_config() -> None:
     )
 
 
+def _validate_secrets() -> tuple[list[str], list[str]]:
+    """Validate SECRET_KEY and JWT_SECRET_KEY configuration.
+
+    Returns:
+        Tuple of (errors, warnings) lists.
+    """
+    errors = []
+
+    secret_key = current_app.config.get("SECRET_KEY")
+    if not secret_key or secret_key == "dev-secret-key-change-in-production":  # nosec B105
+        errors.append("SECRET_KEY is using default value (SECURITY RISK)")
+
+    jwt_secret = current_app.config.get("JWT_SECRET_KEY")
+    if not jwt_secret or jwt_secret == "dev-jwt-secret-change-in-production":  # nosec B105
+        errors.append("JWT_SECRET_KEY is using default value (SECURITY RISK)")
+
+    return errors, []
+
+
+def _validate_database() -> tuple[list[str], list[str]]:
+    """Validate database configuration.
+
+    Returns:
+        Tuple of (errors, warnings) lists.
+    """
+    warnings = []
+
+    db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI")
+    if not db_uri or "sqlite:///:memory:" in db_uri:
+        warnings.append("Using in-memory database (data will be lost on restart)")
+
+    return [], warnings
+
+
+def _validate_guardian_service() -> tuple[list[str], list[str]]:
+    """Validate Guardian service configuration.
+
+    Returns:
+        Tuple of (errors, warnings) lists.
+    """
+    errors = []
+    warnings = []
+
+    guardian_url = current_app.config.get("GUARDIAN_SERVICE_URL")
+    if not guardian_url:
+        errors.append("GUARDIAN_SERVICE_URL is not configured")
+
+    guardian_key = current_app.config.get("GUARDIAN_SERVICE_API_KEY")
+    if not guardian_key:
+        warnings.append("GUARDIAN_SERVICE_API_KEY is not set")
+
+    return errors, warnings
+
+
+def _validate_cors() -> tuple[list[str], list[str]]:
+    """Validate CORS configuration.
+
+    Returns:
+        Tuple of (errors, warnings) lists.
+    """
+    warnings = []
+
+    cors_origins = current_app.config.get("CORS_ORIGINS", [])
+    if not cors_origins and not current_app.config.get("DEBUG"):
+        warnings.append("CORS_ORIGINS is empty (no cross-origin access allowed)")
+
+    return [], warnings
+
+
+def _print_validation_results(errors: list[str], warnings: list[str]) -> None:
+    """Print validation results to console.
+
+    Args:
+        errors: List of error messages.
+        warnings: List of warning messages.
+    """
+    if not errors and not warnings:
+        click.echo(click.style("✓ Configuration is valid\n", fg="green", bold=True))
+        return
+
+    if errors:
+        click.echo(click.style("ERRORS:", fg="red", bold=True))
+        for error in errors:
+            click.echo(click.style(f"  ✗ {error}", fg="red"))
+        click.echo()
+
+    if warnings:
+        click.echo(click.style("WARNINGS:", fg="yellow", bold=True))
+        for warning in warnings:
+            click.echo(click.style(f"  ⚠ {warning}", fg="yellow"))
+        click.echo()
+
+
 @config.command("validate")
 @with_appcontext
 def validate_config() -> None:
@@ -210,57 +303,26 @@ def validate_config() -> None:
         click.style("\n=== Configuration Validation ===\n", fg="cyan", bold=True)
     )
 
-    errors = []
-    warnings = []
+    all_errors: list[str] = []
+    all_warnings: list[str] = []
 
-    # Check critical production settings
+    # Skip production checks in testing mode
     if not current_app.config.get("TESTING"):
-        # SECRET_KEY validation
-        secret_key = current_app.config.get("SECRET_KEY")
-        if not secret_key or secret_key == "dev-secret-key-change-in-production":  # nosec B105
-            errors.append("SECRET_KEY is using default value (SECURITY RISK)")
+        validators = [
+            _validate_secrets,
+            _validate_database,
+            _validate_guardian_service,
+            _validate_cors,
+        ]
 
-        # JWT_SECRET_KEY validation
-        jwt_secret = current_app.config.get("JWT_SECRET_KEY")
-        if not jwt_secret or jwt_secret == "dev-jwt-secret-change-in-production":  # nosec B105
-            errors.append("JWT_SECRET_KEY is using default value (SECURITY RISK)")
+        for validator in validators:
+            errors, warnings = validator()
+            all_errors.extend(errors)
+            all_warnings.extend(warnings)
 
-        # Database validation
-        db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI")
-        if not db_uri or "sqlite:///:memory:" in db_uri:
-            warnings.append("Using in-memory database (data will be lost on restart)")
+    _print_validation_results(all_errors, all_warnings)
 
-        # Guardian validation
-        guardian_url = current_app.config.get("GUARDIAN_SERVICE_URL")
-        if not guardian_url:
-            errors.append("GUARDIAN_SERVICE_URL is not configured")
-
-        guardian_key = current_app.config.get("GUARDIAN_SERVICE_API_KEY")
-        if not guardian_key:
-            warnings.append("GUARDIAN_SERVICE_API_KEY is not set")
-
-        # CORS validation
-        cors_origins = current_app.config.get("CORS_ORIGINS", [])
-        if not cors_origins and not current_app.config.get("DEBUG"):
-            warnings.append("CORS_ORIGINS is empty (no cross-origin access allowed)")
-
-    # Report results
-    if not errors and not warnings:
-        click.echo(click.style("✓ Configuration is valid\n", fg="green", bold=True))
-    else:
-        if errors:
-            click.echo(click.style("ERRORS:", fg="red", bold=True))
-            for error in errors:
-                click.echo(click.style(f"  ✗ {error}", fg="red"))
-            click.echo()
-
-        if warnings:
-            click.echo(click.style("WARNINGS:", fg="yellow", bold=True))
-            for warning in warnings:
-                click.echo(click.style(f"  ⚠ {warning}", fg="yellow"))
-            click.echo()
-
-    if errors:
+    if all_errors:
         click.echo(
             click.style(
                 "⛔ Configuration has critical errors. Fix before deploying to production.\n",
