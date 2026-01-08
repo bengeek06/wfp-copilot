@@ -83,6 +83,7 @@ def create_app(config_class: str = "app.config.DevelopmentConfig") -> Flask:
             re.compile(r"^/health$"),
             re.compile(r"^/ready$"),
             re.compile(r"^/version$"),
+            re.compile(r"^/metrics$"),
         ]
 
         # Add service name label from environment
